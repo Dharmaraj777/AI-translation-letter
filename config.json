@@ -1,0 +1,14 @@
+{
+  "storage_connection_string": "DefaultEndpointsProtocol=...your-conn-string-here...",
+  "input_container_name": "documents-input",
+  "output_container_name": "documents-output",
+  "logs_container_name": "doc-translation-logs",
+
+  "openai_api_base": "https://your-azure-openai-endpoint.openai.azure.com/",
+  "openai_api_key": "YOUR_AZURE_OPENAI_KEY",
+  "openai_api_version": "2024-02-15-preview",
+  "deployment_id": "gpt-4.1",
+
+  "target_language": "French",
+  "target_dialect": "France"
+}
