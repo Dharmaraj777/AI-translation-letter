@@ -11,22 +11,63 @@ class UtilityFunctions:
 
 ==========================================
 
+# ai_translation_utils.py
 import os
 
-def make_output_name(input_name: str, target_language_suffix: str = "_fr") -> str:
-    base, ext = os.path.splitext(input_name)
-    ext_lower = ext.lower()
+class UtilityFunctions:
+    # ... your existing methods (get_extension, etc.) ...
 
-    if ext_lower == ".pdf":
-        # For PDF, we are now returning DOCX bytes from PdfTranslator
-        return f"{base}{target_language_suffix}.docx"
-    else:
-        # For DOCX / PPTX keep same extension
-        return f"{base}{target_language_suffix}{ext}"
+    @staticmethod
+    def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
+        """
+        Build the translated file name.
 
+        Rules:
+        - For PDF input, our PdfTranslator returns a DOCX, so output extension must be .docx
+        - For DOCX/PPTX (and others), keep same extension and just add the suffix
+        """
+        base, ext = os.path.splitext(input_name)
+        ext_lower = ext.lower()
 
-================
+        if ext_lower == ".pdf":
+            # PDF -> translated DOCX
+            return f"{base}{lang_suffix}.docx"
+        else:
+            # DOCX, PPTX, etc. keep extension
+            return f"{base}{lang_suffix}{ext}"
 
-output_blob_name = make_output_name(blob_name, "_fr")
-logger.info(f"Uploading translated file: {output_blob_name}")
-# upload bytes from translator.translate_document(...) with this name
+========================================
+
+from ai_translation_utils import UtilityFunctions
+from ai_translation_output_manager import OutputManager
+from ai_translation_oai_client import OaiClient
+from translators import get_translators  # or similar
+
+def main():
+    # ... set up blob clients, oai_client, translators, etc. ...
+    oai_client = OaiClient()
+    output_manager = OutputManager()
+    translators = get_translators(oai_client)
+
+    for blob_name in input_blob_names:
+        logger.info(f"Processing blob: {blob_name}")
+        content_bytes = download_blob(blob_name)
+
+        translator = select_translator(blob_name, translators)  # however you do this
+        translated_bytes = translator.translate_document(
+            blob_name,
+            content_bytes,
+            target_language="French",
+            target_dialect="France",
+        )
+
+        # ❌ OLD (hard-coded)
+        # base, ext = os.path.splitext(blob_name)
+        # output_blob_name = f"{base}_fr{ext}"
+
+        # ✅ NEW (uses our rule: PDF -> DOCX)
+        output_blob_name = UtilityFunctions.make_output_name(blob_name, "_fr")
+
+        logger.info(f"Uploading translated file: {output_blob_name}")
+        output_manager.upload_translated_blob(output_blob_name, translated_bytes)
+        logger.info(f"[STATUS] {blob_name} -> SUCCESS (Output: {output_blob_name})")
