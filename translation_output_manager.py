@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 from typing import Optional
 from azure.storage.blob import ContainerClient
-from .translation_logger import logger
+from ai_translation_logger import logger
 
 
 class OutputManager:
