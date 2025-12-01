@@ -1,59 +1,31 @@
-    def _render_translated_image(
-        self,
-        original_bytes: bytes,
-        translated_text: str,
-        content_type: str,
-    ) -> bytes:
-        """
-        Create a new image same size as original, white background,
-        and draw the translated text with simple word wrapping.
-        """
-        try:
-            orig_img = Image.open(io.BytesIO(original_bytes)).convert("RGB")
-        except Exception as e:
-            logger.error(f"Failed to open original image for redraw: {e}")
-            return original_bytes
-
-        width, height = orig_img.size
-        new_img = Image.new("RGB", (width, height), "white")
-        draw = ImageDraw.Draw(new_img)
-
-        try:
-            font = ImageFont.load_default()
-        except Exception:
-            font = None
-
-        margin = 20
-
-        # Simple character-based wrapping; ~60 chars per line
-        wrapped_lines = []
-        for paragraph in translated_text.splitlines():
-            if not paragraph.strip():
-                wrapped_lines.append("")
-                continue
-            wrapped_lines.extend(textwrap.wrap(paragraph, width=60))
-
-        # Compute line height safely (no font.getsize)
-        if font is not None:
-            try:
-                ascent, descent = font.getmetrics()
-                line_height = ascent + descent + 4
-            except Exception:
-                line_height = 16
-        else:
-            line_height = 16
-
-        y = margin
-        for line in wrapped_lines:
-            if y + line_height > height - margin:
-                break
-            draw.text((margin, y), line, fill="black", font=font)
-            y += line_height
-
-        out = io.BytesIO()
-        fmt = "PNG"
-        if "jpeg" in content_type.lower() or "jpg" in content_type.lower():
-            fmt = "JPEG"
-        new_img.save(out, format=fmt)
-        out.seek(0)
-        return out.read()
+2025-12-01 07:33:14,268 - INFO - Starting document translation pipeline...
+2025-12-01 07:33:18,740 - INFO - Found 3 blobs in input container.
+2025-12-01 07:33:18,741 - INFO - Processing blob: Employee launch email blast template  BCC WPR.docx
+2025-12-01 07:33:18,742 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
+2025-12-01 07:33:18,753 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
+2025-12-01 07:33:18,768 - INFO - Translating 84 segments via Azure OpenAI...
+2025-12-01 07:33:18,770 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
+2025-12-01 07:34:05,715 - INFO - Translation complete.
+2025-12-01 07:34:05,730 - INFO - [image] Found image rel_id=rId10, content_type=image/png
+2025-12-01 07:34:05,999 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
+2025-12-01 07:34:06,023 - INFO - Calling GPT-4.1 vision to translate image text...
+2025-12-01 07:34:07,570 - INFO - [image translation] GPT output (first 120 chars): 'Exemple de récompense\n\n| 200 points   | 10 $   |\n| 500 points   | 25 $   |\n| 1 000 points | 50 $   |\n| 2 000 points | 10'
+2025-12-01 07:34:07,571 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Exemple de récompense\n\n| 200 points   | 10 $   |\n| 500 points   | 25 $   |\n| 1 0'
+2025-12-01 07:34:07,577 - ERROR - Failed to render/replace translated image (rel_id=rId10): property 'blob' of 'ImagePart' object has no setter
+2025-12-01 07:34:07,578 - INFO - [image] Completed image translation. Found=1, translated=0
+2025-12-01 07:34:07,588 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_fr.docx
+2025-12-01 07:34:07,606 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_fr.docx)
+2025-12-01 07:34:07,627 - INFO - Processing blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
+2025-12-01 07:34:07,628 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
+2025-12-01 07:34:07,670 - WARNING - PDF translation not implemented yet for: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf. Returning original content.
+2025-12-01 07:34:07,671 - INFO - Uploading translated file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA_fr.pdf
+2025-12-01 07:34:07,756 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> SUCCESS (Output: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA_fr.pdf)
+2025-12-01 07:34:07,773 - INFO - Processing blob: The Power of Positivity 3.26.25.pptx
+2025-12-01 07:34:07,773 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
+2025-12-01 07:34:07,828 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
+2025-12-01 07:34:07,846 - INFO - Translating 9 segments via Azure OpenAI...
+2025-12-01 07:34:07,849 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
+2025-12-01 07:34:11,283 - INFO - Translation complete.
+2025-12-01 07:34:11,344 - INFO - Uploading translated file: The Power of Positivity 3.26.25_fr.pptx
+2025-12-01 07:34:11,477 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_fr.pptx)
+2025-12-01 07:34:11,501 - INFO - Document translation pipeline completed.
