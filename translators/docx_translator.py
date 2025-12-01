@@ -3,16 +3,21 @@ import uuid
 from typing import List, Dict, Optional
 
 from docx import Document  # python-docx
+
 from .base_translator import BaseTranslator
-from ..translation_logger import logger
-from ..translation_utils import UtilityFunctions
+from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions
 
 
 class DocxTranslator(BaseTranslator):
     """
-    Simple DOCX translator.
-    NOTE: This implementation translates at paragraph/table-cell level.
-    Mixed formatting within a paragraph (e.g. some words bold) may not be perfectly preserved.
+    DOCX translator.
+    Translates text at paragraph/table-cell level.
+
+    NOTE:
+    - Replaces paragraph/cell text as a whole.
+    - Run-level formatting (bold/italic on specific words) may be simplified,
+      but overall document layout, styles, margins, etc. remain.
     """
 
     def can_handle(self, filename: str) -> bool:
@@ -41,11 +46,13 @@ class DocxTranslator(BaseTranslator):
 
         return segments
 
-    def _apply_translations(self, doc: Document, segments: List[Dict[str, str]], id_to_translation: Dict[str, str]) -> None:
-        # Rebuild easily by iterating in same order again (paragraphs + tables)
-        # and matching against ids in sequence.
-
-        # Build an ordered list of segment IDs in same discovery order
+    def _apply_translations(
+        self,
+        doc: Document,
+        segments: List[Dict[str, str]],
+        id_to_translation: Dict[str, str],
+    ) -> None:
+        # We rely on the same discovery order: paragraphs then tables.
         ordered_ids: List[str] = [s["id"] for s in segments]
         id_iter = iter(ordered_ids)
 
@@ -58,7 +65,6 @@ class DocxTranslator(BaseTranslator):
             if seg_id is None:
                 break
             translated_text = id_to_translation.get(seg_id, text)
-            # Replace full paragraph text. This may reset run-level formatting.
             para.text = translated_text
 
         # Tables
