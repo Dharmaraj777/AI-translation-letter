@@ -1,200 +1,32 @@
-    def _parse_markdown_table(self, translated_text: str):
-        """
-        Very lightweight parser for Markdown-style tables that GPT returns, e.g.:
+# in ai_translation_utils.py
+import os
 
-            Exemple de récompense
+class UtilityFunctions:
+    # ... existing stuff ...
 
-            | Points         | Montant      |
-            |----------------|--------------|
-            | 200 points     | 10 $         |
-            | 500 points     | 25 $         |
+    @staticmethod
+    def replace_extension(filename: str, new_ext: str) -> str:
+        base, _ = os.path.splitext(filename)
+        return base + new_ext
 
-        Returns:
-            title_lines: list[str]  (lines before the first table row)
-            rows: list[list[str]]   (each row is a list of cell strings)
-        """
-        lines = [l.rstrip() for l in translated_text.splitlines()]
+==========================================
 
-        title_lines: list[str] = []
-        table_lines: list[str] = []
-        in_table = False
+import os
 
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("|") and "|" in stripped[1:]:
-                in_table = True
-                # make sure it ends with a pipe for consistent splitting
-                if not stripped.endswith("|"):
-                    stripped = stripped + "|"
-                table_lines.append(stripped)
-            else:
-                if not in_table:
-                    # everything before table is considered title/heading
-                    if stripped:
-                        title_lines.append(stripped)
-                # if already in_table and hit non-table line, we just ignore it
+def make_output_name(input_name: str, target_language_suffix: str = "_fr") -> str:
+    base, ext = os.path.splitext(input_name)
+    ext_lower = ext.lower()
 
-        if not table_lines:
-            return title_lines, []
-
-        # Remove pure separator rows like |-----|------|
-        parsed_rows = []
-        for ln in table_lines:
-            inner = ln.strip().strip("|")
-            parts = [p.strip() for p in inner.split("|")]
-
-            # detect "separator" row (all '-', ':' or empty)
-            is_sep = all(not p or set(p) <= {"-", ":"} for p in parts)
-            if is_sep:
-                continue
-
-            parsed_rows.append(parts)
-
-        # ensure consistent column count
-        if not parsed_rows:
-            return title_lines, []
-
-        n_cols = len(parsed_rows[0])
-        cleaned_rows = [row for row in parsed_rows if len(row) == n_cols]
-
-        return title_lines, cleaned_rows
+    if ext_lower == ".pdf":
+        # For PDF, we are now returning DOCX bytes from PdfTranslator
+        return f"{base}{target_language_suffix}.docx"
+    else:
+        # For DOCX / PPTX keep same extension
+        return f"{base}{target_language_suffix}{ext}"
 
 
-==================================
+================
 
-    def _render_translated_image(
-        self,
-        original_bytes: bytes,
-        translated_text: str,
-        content_type: str,
-    ) -> bytes:
-        """
-        Create a new image same size as original, white background, and:
-        - If GPT returned a Markdown-like table, draw a table (title + grid)
-        - Otherwise, draw wrapped text
-
-        This makes the structure MUCH closer to the original reward-table image,
-        even if fonts/colors aren’t identical.
-        """
-        try:
-            orig_img = Image.open(io.BytesIO(original_bytes)).convert("RGB")
-        except Exception as e:
-            logger.error(f"Failed to open original image for redraw: {e}")
-            return original_bytes
-
-        width, height = orig_img.size
-        new_img = Image.new("RGB", (width, height), "white")
-        draw = ImageDraw.Draw(new_img)
-
-        try:
-            font = ImageFont.load_default()
-        except Exception:
-            font = None
-
-        # Safe line height
-        if font is not None:
-            try:
-                ascent, descent = font.getmetrics()
-                line_height = ascent + descent + 4
-            except Exception:
-                line_height = 16
-        else:
-            line_height = 16
-
-        margin = 20
-
-        # ---- Try to interpret as Markdown table ----
-        title_lines, table_rows = self._parse_markdown_table(translated_text)
-
-        if table_rows:
-            # We have a table structure
-            logger.info("[image] Rendering translated image as table layout.")
-
-            # 1) Draw title (if any)
-            y = margin
-            if title_lines:
-                for line in title_lines:
-                    if y + line_height > height - margin:
-                        break
-                    draw.text((margin, y), line, fill="black", font=font)
-                    y += line_height + 4
-                y += 8  # extra space after title
-
-            # 2) Compute column widths based on text length
-            n_cols = len(table_rows[0])
-            # max text length per column
-            col_lengths = [0] * n_cols
-            for row in table_rows:
-                for j, cell in enumerate(row):
-                    col_lengths[j] = max(col_lengths[j], len(cell))
-
-            total_len = sum(col_lengths) or 1
-            available_width = width - 2 * margin
-            col_widths = []
-            for L in col_lengths:
-                # proportional width, but minimum of, say, 80 px
-                w_j = max(int(available_width * (L / total_len)), 80)
-                col_widths.append(w_j)
-
-            # Normalize so sum fits into available_width
-            scale = available_width / float(sum(col_widths))
-            col_widths = [int(w * scale) for w in col_widths]
-
-            table_top = y
-            row_height = line_height + 10
-
-            # 3) Draw each row as grid cells
-            for row_idx, row in enumerate(table_rows):
-                x = margin
-                row_top = table_top + row_idx * row_height
-                row_bottom = row_top + row_height
-
-                if row_bottom > height - margin:
-                    break  # no more space
-
-                for col_idx, cell_text in enumerate(row):
-                    col_width = col_widths[col_idx]
-                    cell_left = x
-                    cell_right = x + col_width
-
-                    # Draw cell border
-                    draw.rectangle(
-                        [cell_left, row_top, cell_right, row_bottom],
-                        outline="black",
-                        width=1,
-                    )
-
-                    # Simple horizontal padding
-                    text_x = cell_left + 5
-                    # Vertically center text
-                    text_y = row_top + (row_height - line_height) // 2
-
-                    # No wrapping inside cell for now; truncate if too long
-                    draw.text((text_x, text_y), cell_text, fill="black", font=font)
-
-                    x += col_width
-
-        else:
-            # ---- Fallback: plain wrapped text ----
-            logger.info("[image] No markdown table detected; rendering as wrapped text.")
-            wrapped_lines: List[str] = []
-            for paragraph in translated_text.splitlines():
-                if not paragraph.strip():
-                    wrapped_lines.append("")
-                    continue
-                wrapped_lines.extend(textwrap.wrap(paragraph, width=60))
-
-            y = margin
-            for line in wrapped_lines:
-                if y + line_height > height - margin:
-                    break
-                draw.text((margin, y), line, fill="black", font=font)
-                y += line_height
-
-        out = io.BytesIO()
-        fmt = "PNG"
-        if "jpeg" in content_type.lower() or "jpg" in content_type.lower():
-            fmt = "JPEG"
-        new_img.save(out, format=fmt)
-        out.seek(0)
-        return out.read()
+output_blob_name = make_output_name(blob_name, "_fr")
+logger.info(f"Uploading translated file: {output_blob_name}")
+# upload bytes from translator.translate_document(...) with this name
