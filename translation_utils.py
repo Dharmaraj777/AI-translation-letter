@@ -3,7 +3,7 @@ import json
 import os
 from typing import Iterable, List, Dict
 from azure.storage.blob import ContainerClient, BlobClient
-from .translation_logger import logger
+from ai_translation_logger import logger
 
 
 ALLOWED_EXTENSIONS = {".docx", ".pptx", ".pdf"}
@@ -53,3 +53,27 @@ class UtilityFunctions:
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from model output: {e}")
             raise
+
+    @staticmethod
+    def replace_extension(filename: str, new_ext: str) -> str:
+        base, _ = os.path.splitext(filename)
+        return base + new_ext
+    
+    @staticmethod
+    def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
+        """
+        Build the translated file name.
+
+        Rules:
+        - For PDF input, our PdfTranslator returns a DOCX, so output extension must be .docx
+        - For DOCX/PPTX (and others), keep same extension and just add the suffix
+        """
+        base, ext = os.path.splitext(input_name)
+        ext_lower = ext.lower()
+
+        if ext_lower == ".pdf":
+            # PDF -> translated DOCX
+            return f"{base}{lang_suffix}.docx"
+        else:
+            # DOCX, PPTX, etc. keep extension
+            return f"{base}{lang_suffix}{ext}"
