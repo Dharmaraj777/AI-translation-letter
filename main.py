@@ -1,13 +1,13 @@
 import os
 from typing import List
 
-from translation_config_loader import ConfigLoader
-from translation_logger import logger
-from translation_utils import UtilityFunctions
-from translation_output_manager import OutputManager
-from translation_oai_client import OaiClient
-
+from ai_translation_config_loader import ConfigLoader
+from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions
+from ai_translation_output_manager import OutputManager
+from ai_translation_oai_client import OaiClient
 from translators import DocxTranslator, PptxTranslator, PdfTranslator
+
 
 
 def get_translators(oai_client: OaiClient):
