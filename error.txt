@@ -1,52 +1,235 @@
-2025-12-01 09:25:24,625 - INFO - Starting document translation pipeline...
-2025-12-01 09:25:27,439 - INFO - Found 3 blobs in input container.
-2025-12-01 09:25:27,439 - INFO - Processing blob: Employee launch email blast template  BCC WPR.docx
-2025-12-01 09:25:27,439 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
-2025-12-01 09:25:27,465 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
-2025-12-01 09:25:27,479 - INFO - Translating 84 segments via Azure OpenAI...
-2025-12-01 09:25:27,479 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
-2025-12-01 09:26:02,519 - INFO - Translation complete.
-2025-12-01 09:26:02,541 - INFO - [image] Found image rel_id=rId10, content_type=image/png
-2025-12-01 09:26:03,000 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
-2025-12-01 09:26:03,025 - INFO - Calling GPT-4.1 vision to translate image text...
-2025-12-01 09:26:05,657 - INFO - [image translation] GPT output (first 120 chars): 'Exemple de récompense\n\n| 200 points   | 10 $   |\n| 500 points   | 25 $   |\n| 1 000 points | 50 $   |\n| 2 000 points | 10'
-2025-12-01 09:26:05,657 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Exemple de récompense\n\n| 200 points   | 10 $   |\n| 500 points   | 25 $   |\n| 1 0'
-2025-12-01 09:26:05,657 - INFO - [image] Rendering translated image as table layout.
-2025-12-01 09:26:05,666 - INFO - [image] Replaced image (rel_id=rId10) with translated version.
-2025-12-01 09:26:05,668 - INFO - [image] Completed image translation. Found=1, translated=1
-2025-12-01 09:26:05,677 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_fr.docx
-2025-12-01 09:26:05,688 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_fr.docx)
-2025-12-01 09:26:05,724 - INFO - Processing blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-01 09:26:05,725 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-01 09:26:05,805 - INFO - Translating PDF by overlaying translated text on pages: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-01 09:26:05,811 - INFO - [PDF] Processing page 1/4
-2025-12-01 09:26:05,907 - INFO - [PDF] Translating 4 spans on page 1 via Azure OpenAI...
-2025-12-01 09:26:05,907 - INFO - Translating 4 segments via Azure OpenAI...
-2025-12-01 09:26:05,907 - INFO - Translating batch of 4 segments: p0-b2-l0-s0 ... p0-b3-l1-s0
-2025-12-01 09:26:06,895 - INFO - Translation complete.
-2025-12-01 09:26:07,731 - INFO - [PDF] Processing page 2/4
-2025-12-01 09:26:07,737 - INFO - [PDF] Translating 56 spans on page 2 via Azure OpenAI...
-2025-12-01 09:26:07,738 - INFO - Translating 56 segments via Azure OpenAI...
-2025-12-01 09:26:07,739 - INFO - Translating batch of 56 segments: p1-b0-l0-s0 ... p1-b25-l2-s0
-2025-12-01 09:26:38,340 - INFO - Translation complete.
-2025-12-01 09:26:38,574 - INFO - [PDF] Processing page 3/4
-2025-12-01 09:26:38,579 - INFO - [PDF] Translating 59 spans on page 3 via Azure OpenAI...
-2025-12-01 09:26:38,580 - INFO - Translating 59 segments via Azure OpenAI...
-2025-12-01 09:26:38,581 - INFO - Translating batch of 59 segments: p2-b0-l0-s0 ... p2-b21-l3-s1
-2025-12-01 09:26:57,227 - INFO - Translation complete.
-2025-12-01 09:26:57,375 - INFO - [PDF] Processing page 4/4
-2025-12-01 09:26:57,389 - INFO - [PDF] Translating 7 spans on page 4 via Azure OpenAI...
-2025-12-01 09:26:57,391 - INFO - Translating 7 segments via Azure OpenAI...
-2025-12-01 09:26:57,392 - INFO - Translating batch of 7 segments: p3-b0-l0-s0 ... p3-b4-l0-s0
-2025-12-01 09:26:59,360 - INFO - Translation complete.
-2025-12-01 09:26:59,544 - ERROR - Translation failed for IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf: document closed
-2025-12-01 09:26:59,545 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> TRANSLATION_FAILED (document closed)
-2025-12-01 09:26:59,585 - INFO - Processing blob: The Power of Positivity 3.26.25.pptx
-2025-12-01 09:26:59,587 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
-2025-12-01 09:26:59,626 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
-2025-12-01 09:26:59,631 - INFO - Translating 9 segments via Azure OpenAI...
-2025-12-01 09:26:59,631 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
-2025-12-01 09:27:04,461 - INFO - Translation complete.
-2025-12-01 09:27:04,529 - INFO - Uploading translated file: The Power of Positivity 3.26.25_fr.pptx
-2025-12-01 09:27:04,617 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_fr.pptx)
-2025-12-01 09:27:04,644 - INFO - Document translation pipeline completed.
+import io
+from typing import Optional, List, Dict, Tuple
+
+import fitz  # PyMuPDF
+from PIL import Image, ImageDraw, ImageFont
+
+from .base_translator import BaseTranslator
+from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions
+
+
+class PdfTranslator(BaseTranslator):
+    """
+    PDF translator.
+
+    Strategy (per page):
+      1) Extract all text spans + bounding boxes via PyMuPDF.
+      2) Translate those text spans with OaiClient.translate_segments().
+      3) Render the original page to an image (keeps layout, shapes, graphics).
+      4) For each span, cover the original text region with white and draw
+         the translated text at the same position.
+      5) Build a new PDF from the translated page images.
+
+    Notes:
+      - This preserves visual structure much better than "plain text PDF".
+      - Only works on text that is *real text* in the PDF, not scanned images.
+      - Text inside images will remain untranslated (for now).
+    """
+
+    def can_handle(self, filename: str) -> bool:
+        return UtilityFunctions.get_extension(filename) == ".pdf"
+
+    # ---------------------------------------------------------
+    # Internal: extract text spans and bounding boxes
+    # ---------------------------------------------------------
+    def _extract_page_spans(
+        self,
+        page: fitz.Page,
+        page_index: int,
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, object]]]:
+        """
+        Use page.get_text('dict') to extract spans with text + bbox.
+
+        Returns:
+          segments: list of {"id": <seg_id>, "text": <text>}
+          spans_meta: list of {"id": <seg_id>, "bbox": [x0,y0,x1,y1]}
+        """
+        text_dict = page.get_text("dict")
+        segments: List[Dict[str, str]] = []
+        spans_meta: List[Dict[str, object]] = []
+
+        for b_idx, block in enumerate(text_dict.get("blocks", [])):
+            # block["type"] == 0 => text
+            if block.get("type", 1) != 0:
+                continue
+
+            for l_idx, line in enumerate(block.get("lines", [])):
+                for s_idx, span in enumerate(line.get("spans", [])):
+                    text = span.get("text", "")
+                    if not text or not text.strip():
+                        continue
+
+                    seg_id = f"p{page_index}-b{b_idx}-l{l_idx}-s{s_idx}"
+                    segments.append({"id": seg_id, "text": text})
+                    spans_meta.append(
+                        {
+                            "id": seg_id,
+                            "bbox": span.get("bbox", [0, 0, 0, 0]),  # [x0, y0, x1, y1]
+                        }
+                    )
+
+        return segments, spans_meta
+
+    # ---------------------------------------------------------
+    # Internal: overlay translated text on page image
+    # ---------------------------------------------------------
+    def _overlay_translations_on_page_image(
+        self,
+        page: fitz.Page,
+        segments: List[Dict[str, str]],
+        spans_meta: List[Dict[str, object]],
+        id_to_translation: Dict[str, str],
+        dpi: int = 200,
+    ) -> bytes:
+        """
+        Render page to an image and overlay translated text spans.
+        Returns PNG bytes of the new translated page image.
+        """
+        # Render original page to pixmap
+        pix = page.get_pixmap(dpi=dpi)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        draw = ImageDraw.Draw(img)
+
+        # Basic font
+        try:
+            font = ImageFont.load_default()
+        except Exception:
+            font = None
+
+        # Scaling from PDF coordinates to image pixels
+        page_rect = page.rect  # fitz.Rect
+        scale_x = pix.width / float(page_rect.width or 1.0)
+        scale_y = pix.height / float(page_rect.height or 1.0)
+
+        for span in spans_meta:
+            seg_id = span["id"]
+            bbox = span["bbox"]  # [x0, y0, x1, y1]
+            if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+                continue
+
+            x0, y0, x1, y1 = bbox
+            px0 = int(x0 * scale_x)
+            py0 = int(y0 * scale_y)
+            px1 = int(x1 * scale_x)
+            py1 = int(y1 * scale_y)
+
+            # Translation for this span
+            new_text = id_to_translation.get(seg_id)
+            if not new_text or not new_text.strip():
+                # Fallback: keep original text if translation missing
+                orig = next((s["text"] for s in segments if s["id"] == seg_id), "")
+                new_text = orig
+
+            # Cover original text area with white (assumes light background)
+            draw.rectangle([px0, py0, px1, py1], fill="white")
+
+            # Draw translated text at top-left of the bbox
+            draw.text((px0, py0), new_text, fill="black", font=font)
+
+        out = io.BytesIO()
+        img.save(out, format="PNG")
+        out.seek(0)
+        return out.read()
+
+    # ---------------------------------------------------------
+    # Public: translate whole PDF
+    # ---------------------------------------------------------
+    def translate_document(
+        self,
+        filename: str,
+        content_bytes: bytes,
+        target_language: Optional[str] = None,
+        target_dialect: Optional[str] = None,
+    ) -> bytes:
+        logger.info(f"Translating PDF by overlaying translated text on pages: {filename}")
+
+        try:
+            src_doc = fitz.open(stream=content_bytes, filetype="pdf")
+        except Exception as e:
+            logger.error(f"[PDF] Failed to open PDF '{filename}': {e}")
+            return content_bytes
+
+        out_doc = fitz.open()
+
+        try:
+            for page_index in range(len(src_doc)):
+                page = src_doc.load_page(page_index)
+                logger.info(f"[PDF] Processing page {page_index + 1}/{len(src_doc)}")
+
+                # 1) Extract text spans
+                segments, spans_meta = self._extract_page_spans(page, page_index)
+
+                if not segments:
+                    logger.info(
+                        f"[PDF] No text spans found on page {page_index + 1}; "
+                        f"embedding original page image."
+                    )
+                    # Just copy page as image
+                    pix = page.get_pixmap(dpi=200)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    buf.seek(0)
+
+                    new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
+                    new_page.insert_image(new_page.rect, stream=buf.getvalue())
+                    continue
+
+                # 2) Translate all segments on this page using GPT-4.1 (text, not vision)
+                try:
+                    logger.info(
+                        f"[PDF] Translating {len(segments)} spans on page {page_index + 1} via Azure OpenAI..."
+                    )
+                    id_to_translation = self.oai_client.translate_segments(
+                        segments,
+                        target_language=target_language,
+                        target_dialect=target_dialect,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"[PDF] Translation failed for page {page_index + 1}: {e}. "
+                        f"Embedding original page image."
+                    )
+                    pix = page.get_pixmap(dpi=200)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    buf.seek(0)
+
+                    new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
+                    new_page.insert_image(new_page.rect, stream=buf.getvalue())
+                    continue
+
+                # 3) Render new page image with translated text overlaid
+                translated_png = self._overlay_translations_on_page_image(
+                    page,
+                    segments,
+                    spans_meta,
+                    id_to_translation,
+                    dpi=200,
+                )
+
+                # 4) Create corresponding page in output PDF
+                new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
+                new_page.insert_image(new_page.rect, stream=translated_png)
+
+        finally:
+            src_doc.close()
+
+        # Save out_doc safely
+        page_count = len(out_doc)  # compute BEFORE closing
+        out_stream = io.BytesIO()
+        try:
+            out_doc.save(out_stream)
+        except Exception as e:
+            logger.error(f"[PDF] Failed to save translated PDF '{filename}': {e}")
+            out_doc.close()
+            # Fallback: return original PDF
+            return content_bytes
+
+        out_doc.close()
+        out_stream.seek(0)
+
+        logger.info(f"[PDF] Finished translating PDF '{filename}'. Pages: {page_count}")
+        return out_stream.read()
