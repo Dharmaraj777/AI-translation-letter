@@ -6,19 +6,11 @@ from ai_translation_logger import logger
 from ai_translation_utils import UtilityFunctions
 from ai_translation_output_manager import OutputManager
 from ai_translation_oai_client import OaiClient
-from translators import DocxTranslator, PptxTranslator, PdfTranslator
+from translators import get_translators
 
 
-
-def get_translators(oai_client: OaiClient):
-    """
-    Register available translators here.
-    """
-    return [
-        DocxTranslator(oai_client),
-        PptxTranslator(oai_client),
-        PdfTranslator(oai_client),
-    ]
+oai_client = OaiClient()
+translators = get_translators(oai_client)
 
 
 def find_translator(filename: str, translators) -> object:
@@ -35,7 +27,7 @@ def process_blob(
     output_manager: OutputManager,
 ) -> None:
     ext = UtilityFunctions.get_extension(blob_name)
-    if ext not in {".docx", ".pptx", ".pdf"}:
+    if ext not in {".docx", ".pptx"}:
         logger.info(f"Skipping unsupported file type: {blob_name}")
         output_manager.log_status(blob_name, "SKIPPED_UNSUPPORTED", f"Extension: {ext}")
         return
