@@ -1,5 +1,3 @@
-# translators/docx_translator.py
-
 import io
 import textwrap
 from typing import List, Dict, Optional
@@ -121,9 +119,8 @@ class DocxTranslator(BaseTranslator):
             font = None
 
         margin = 20
-        max_text_width_px = width - 2 * margin
 
-        # Simple character-based wrapping (we don't know real font metrics here)
+        # Simple char-based wrapping (~60 chars per line)
         wrapped_lines: List[str] = []
         for paragraph in translated_text.splitlines():
             if not paragraph.strip():
@@ -131,8 +128,13 @@ class DocxTranslator(BaseTranslator):
                 continue
             wrapped_lines.extend(textwrap.wrap(paragraph, width=60))
 
+        # Compute line height safely (no font.getsize)
         if font is not None:
-            line_height = font.getsize("A")[1] + 4
+            try:
+                ascent, descent = font.getmetrics()
+                line_height = ascent + descent + 4
+            except Exception:
+                line_height = 16
         else:
             line_height = 16
 
@@ -172,7 +174,7 @@ class DocxTranslator(BaseTranslator):
 
             image_count += 1
             image_part = rel.target_part
-            original_bytes = image_part.blob
+            original_bytes = image_part.blob  # read-only property is OK to read
             content_type = getattr(image_part, "content_type", "image/png")
 
             logger.info(f"[image] Found image rel_id={rel_id}, content_type={content_type}")
@@ -192,7 +194,10 @@ class DocxTranslator(BaseTranslator):
                 logger.info(f"[image] No translated text returned for rel_id={rel_id}; leaving image unchanged.")
                 continue
 
-            logger.info(f"[image] GPT translation for rel_id={rel_id} (first 80 chars): {translated_text[:80]!r}")
+            logger.info(
+                f"[image] GPT translation for rel_id={rel_id} (first 80 chars): "
+                f"{translated_text[:80]!r}"
+            )
 
             try:
                 new_bytes = self._render_translated_image(
@@ -200,8 +205,9 @@ class DocxTranslator(BaseTranslator):
                     translated_text,
                     content_type,
                 )
-                # IMPORTANT: use the public property .blob
-                image_part.blob = new_bytes
+                # IMPORTANT: in your python-docx version, .blob is read-only.
+                # We must set the private attribute _blob instead.
+                image_part._blob = new_bytes  # <-- key fix
                 translated_count += 1
                 logger.info(f"[image] Replaced image (rel_id={rel_id}) with translated version.")
             except Exception as e:
