@@ -1,40 +1,35 @@
+# translators/docx_translator.py
+
 import io
 from typing import List, Dict, Optional
 
 from docx import Document  # python-docx
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from .base_translator import BaseTranslator
 from ai_translation_logger import logger
 from ai_translation_utils import UtilityFunctions
+from ai_translation_image_utils import translate_image_with_ocr_and_gpt
 
 
 class DocxTranslator(BaseTranslator):
     """
     DOCX translator.
 
-    Key points:
-    - We translate at RUN level (paragraph.runs / cell.paragraphs[].runs).
-    - This preserves font, size, color, bold/italic, and inline images,
-      because we never replace the whole paragraph or cell.
-    - Each run with non-empty text becomes a 'segment' with a deterministic ID.
-    - After translation, we walk the same structure and update run.text
-      based on the ID->translation mapping.
+    - Text: translates at RUN level (paragraph.runs / cell.paragraphs[].runs),
+      preserving fonts, sizes, colors, and inline images.
+    - Images: for each embedded image, runs OCR to detect text; if text is found,
+      uses GPT to translate it and overlays translated text on the image.
+      The DOCX image part is replaced with the new image bytes.
     """
 
     def can_handle(self, filename: str) -> bool:
         return UtilityFunctions.get_extension(filename) == ".docx"
 
     # ------------------------------------------------------------------
-    # Segment collection
+    # Segment collection (RUN-level)
     # ------------------------------------------------------------------
     def _collect_segments(self, doc: Document) -> List[Dict[str, str]]:
-        """
-        Collect text segments at RUN level from:
-          - Top-level paragraphs
-          - Tables -> cells -> paragraphs -> runs
-        Each segment has:
-          { "id": <segment_id>, "text": <original_text> }
-        """
         segments: List[Dict[str, str]] = []
 
         # Top-level paragraphs
@@ -62,18 +57,13 @@ class DocxTranslator(BaseTranslator):
         return segments
 
     # ------------------------------------------------------------------
-    # Apply translations back to the document
+    # Apply translations back to runs
     # ------------------------------------------------------------------
-    def _apply_translations(
+    def _apply_text_translations(
         self,
         doc: Document,
         id_to_translation: Dict[str, str],
     ) -> None:
-        """
-        Walk the document structure again and update run.text
-        where we have a translation for that run's ID.
-        """
-
         # Top-level paragraphs
         for p_idx, para in enumerate(doc.paragraphs):
             for r_idx, run in enumerate(para.runs):
@@ -84,7 +74,7 @@ class DocxTranslator(BaseTranslator):
                 if seg_id in id_to_translation:
                     run.text = id_to_translation[seg_id]
 
-        # Tables (cells)
+        # Tables
         for t_idx, table in enumerate(doc.tables):
             for row_idx, row in enumerate(table.rows):
                 for col_idx, cell in enumerate(row.cells):
@@ -101,6 +91,43 @@ class DocxTranslator(BaseTranslator):
                                 run.text = id_to_translation[seg_id]
 
     # ------------------------------------------------------------------
+    # Image translation
+    # ------------------------------------------------------------------
+    def _translate_images_in_doc(
+        self,
+        doc: Document,
+        target_language: Optional[str] = None,
+        target_dialect: Optional[str] = None,
+    ) -> None:
+        """
+        Iterate over all image relationships in the DOCX, run OCR+GPT on each,
+        and replace the image part if we successfully create a translated version.
+        """
+        rels = doc.part.rels
+        for rel_id, rel in rels.items():
+            if rel.reltype != RT.IMAGE:
+                continue
+
+            image_part = rel.target_part
+            original_bytes = image_part.blob
+
+            try:
+                new_bytes = translate_image_with_ocr_and_gpt(
+                    original_bytes,
+                    self.oai_client,
+                    target_language=target_language,
+                    target_dialect=target_dialect,
+                )
+            except Exception as e:
+                logger.error(f"Error translating image (rel_id={rel_id}): {e}")
+                continue
+
+            if new_bytes is not None:
+                logger.info(f"Replacing image (rel_id={rel_id}) with translated version.")
+                # Updating the underlying blob replaces the image in the DOCX
+                image_part._blob = new_bytes
+
+    # ------------------------------------------------------------------
     # Public entrypoint
     # ------------------------------------------------------------------
     def translate_document(
@@ -114,23 +141,29 @@ class DocxTranslator(BaseTranslator):
         doc_stream = io.BytesIO(content_bytes)
         doc = Document(doc_stream)
 
-        # 1) Collect run-level segments
+        # 1) Collect run-level text segments
         segments = self._collect_segments(doc)
-        if not segments:
-            logger.info("No text segments found in DOCX, returning original document.")
-            return content_bytes
+        if segments:
+            id_to_translation = self.oai_client.translate_segments(
+                segments,
+                target_language=target_language,
+                target_dialect=target_dialect,
+            )
+            self._apply_text_translations(doc, id_to_translation)
+        else:
+            logger.info("No text segments found in DOCX body text.")
 
-        # 2) Call Azure OpenAI to translate
-        id_to_translation = self.oai_client.translate_segments(
-            segments,
-            target_language=target_language,
-            target_dialect=target_dialect,
-        )
+        # 2) Translate images (if OCR & GPT available)
+        try:
+            self._translate_images_in_doc(
+                doc,
+                target_language=target_language,
+                target_dialect=target_dialect,
+            )
+        except Exception as e:
+            logger.error(f"Image translation step failed (non-fatal): {e}")
 
-        # 3) Apply translations back to the runs
-        self._apply_translations(doc, id_to_translation)
-
-        # 4) Save to bytes
+        # 3) Save final DOCX
         out_stream = io.BytesIO()
         doc.save(out_stream)
         out_stream.seek(0)
