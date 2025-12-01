@@ -1,13 +1,13 @@
 # translators/docx_translator.py
 
 import io
+import textwrap
 from typing import List, Dict, Optional
 
 from docx import Document  # python-docx
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from PIL import Image, ImageDraw, ImageFont
-import textwrap
 
 from .base_translator import BaseTranslator
 from ai_translation_logger import logger
@@ -31,9 +31,9 @@ class DocxTranslator(BaseTranslator):
     def can_handle(self, filename: str) -> bool:
         return UtilityFunctions.get_extension(filename) == ".docx"
 
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     # TEXT: collect RUN-level segments
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     def _collect_segments(self, doc: Document) -> List[Dict[str, str]]:
         segments: List[Dict[str, str]] = []
 
@@ -92,9 +92,9 @@ class DocxTranslator(BaseTranslator):
                             if seg_id in id_to_translation:
                                 run.text = id_to_translation[seg_id]
 
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     # IMAGES: GPT-4.1 vision + redraw
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     def _render_translated_image(
         self,
         original_bytes: bytes,
@@ -102,37 +102,35 @@ class DocxTranslator(BaseTranslator):
         content_type: str,
     ) -> bytes:
         """
-        Create a new image with same size as original, white background,
+        Create a new image same size as original, white background,
         and draw the translated text with simple word wrapping.
         """
         try:
-            img = Image.open(io.BytesIO(original_bytes)).convert("RGB")
+            orig_img = Image.open(io.BytesIO(original_bytes)).convert("RGB")
         except Exception as e:
             logger.error(f"Failed to open original image for redraw: {e}")
             return original_bytes
 
-        width, height = img.size
+        width, height = orig_img.size
         new_img = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(new_img)
 
-        # Choose a reasonable font
         try:
             font = ImageFont.load_default()
         except Exception:
             font = None
 
         margin = 20
-        max_text_width = width - 2 * margin
+        max_text_width_px = width - 2 * margin
 
-        # Simple wrapping: we use character-based wrap; good enough for now
-        wrapped_lines = []
+        # Simple character-based wrapping (we don't know real font metrics here)
+        wrapped_lines: List[str] = []
         for paragraph in translated_text.splitlines():
             if not paragraph.strip():
                 wrapped_lines.append("")
                 continue
             wrapped_lines.extend(textwrap.wrap(paragraph, width=60))
 
-        # Draw lines
         if font is not None:
             line_height = font.getsize("A")[1] + 4
         else:
@@ -146,9 +144,8 @@ class DocxTranslator(BaseTranslator):
             y += line_height
 
         out = io.BytesIO()
-        # Try to preserve original format
         fmt = "PNG"
-        if "jpeg" in content_type or "jpg" in content_type:
+        if "jpeg" in content_type.lower() or "jpg" in content_type.lower():
             fmt = "JPEG"
         new_img.save(out, format=fmt)
         out.seek(0)
@@ -166,15 +163,19 @@ class DocxTranslator(BaseTranslator):
           - redraw image with translated text
           - replace image bytes in the DOCX part
         """
+        image_count = 0
+        translated_count = 0
+
         for rel_id, rel in doc.part.rels.items():
             if rel.reltype != RT.IMAGE:
                 continue
 
+            image_count += 1
             image_part = rel.target_part
             original_bytes = image_part.blob
             content_type = getattr(image_part, "content_type", "image/png")
 
-            logger.info(f"Translating image (rel_id={rel_id}, type={content_type}) via GPT-4.1 vision.")
+            logger.info(f"[image] Found image rel_id={rel_id}, content_type={content_type}")
 
             try:
                 translated_text = self.oai_client.translate_image_to_language(
@@ -188,8 +189,10 @@ class DocxTranslator(BaseTranslator):
                 continue
 
             if not translated_text.strip():
-                logger.info(f"No translated text returned for image (rel_id={rel_id}); leaving as-is.")
+                logger.info(f"[image] No translated text returned for rel_id={rel_id}; leaving image unchanged.")
                 continue
+
+            logger.info(f"[image] GPT translation for rel_id={rel_id} (first 80 chars): {translated_text[:80]!r}")
 
             try:
                 new_bytes = self._render_translated_image(
@@ -197,15 +200,19 @@ class DocxTranslator(BaseTranslator):
                     translated_text,
                     content_type,
                 )
-                image_part._blob = new_bytes
-                logger.info(f"Replaced image (rel_id={rel_id}) with translated image.")
+                # IMPORTANT: use the public property .blob
+                image_part.blob = new_bytes
+                translated_count += 1
+                logger.info(f"[image] Replaced image (rel_id={rel_id}) with translated version.")
             except Exception as e:
                 logger.error(f"Failed to render/replace translated image (rel_id={rel_id}): {e}")
                 continue
 
-    # ------------------------------------------------------------------
+        logger.info(f"[image] Completed image translation. Found={image_count}, translated={translated_count}")
+
+    # ---------------------------------------------------------
     # Public entrypoint
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
     def translate_document(
         self,
         filename: str,
@@ -217,7 +224,7 @@ class DocxTranslator(BaseTranslator):
         doc_stream = io.BytesIO(content_bytes)
         doc = Document(doc_stream)
 
-        # 1) Run-level text translation
+        # 1) Text (runs)
         segments = self._collect_segments(doc)
         if segments:
             id_to_translation = self.oai_client.translate_segments(
@@ -229,7 +236,7 @@ class DocxTranslator(BaseTranslator):
         else:
             logger.info("No text segments found in DOCX body text.")
 
-        # 2) Image translation via GPT-4.1 vision
+        # 2) Images via GPT-4.1 vision
         try:
             self._translate_images_in_doc(
                 doc,
