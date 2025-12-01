@@ -1,0 +1,31 @@
+---------------------------------------------------------------------------
+ImportError                               Traceback (most recent call last)
+Cell In[1], line 10
+      7 from ai_translation_output_manager import OutputManager
+      8 from ai_translation_oai_client import OaiClient
+---> 10 from translators import DocxTranslator, PptxTranslator, PdfTranslator
+     13 def get_translators(oai_client: OaiClient):
+     14     """
+     15     Register available translators here.
+     16     """
+
+File c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-translation-letter\translators\__init__.py:1
+----> 1 from .docx_translator import DocxTranslator
+      2 from .pptx_translator import PptxTranslator
+      3 from .pdf_translator import PdfTranslator
+
+File c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-translation-letter\translators\docx_translator.py:6
+      3 from typing import List, Dict, Optional
+      5 from docx import Document  # python-docx
+----> 6 from .base_translator import BaseTranslator
+      7 from ..ai_translation_logger import logger
+      8 from ..ai_translation_utils import UtilityFunctions
+
+File c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-translation-letter\translators\base_translator.py:3
+      1 from abc import ABC, abstractmethod
+      2 from typing import Optional
+----> 3 from ..ai_translation_oai_client import OaiClient
+      6 class BaseTranslator(ABC):
+      7     def __init__(self, oai_client: OaiClient):
+
+ImportError: attempted relative import beyond top-level package
