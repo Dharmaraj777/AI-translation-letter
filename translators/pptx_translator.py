@@ -1,18 +1,22 @@
 import io
 import uuid
 from typing import List, Dict, Optional
+
 from pptx import Presentation  # python-pptx
 
 from .base_translator import BaseTranslator
-from ..translation_logger import logger
-from ..translation_utils import UtilityFunctions
+from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions
 
 
 class PptxTranslator(BaseTranslator):
     """
-    Simple PPTX translator.
-    Translates text at paragraph level inside shapes & table cells.
-    Mixed formatting within a paragraph may lose per-word styles.
+    PPTX translator.
+    Translates text at paragraph level in shapes and table cells.
+
+    NOTE:
+    - Similar tradeoff as DOCX: per-word styles may be simplified,
+      but slide layouts, positions, colors, etc. stay intact.
     """
 
     def can_handle(self, filename: str) -> bool:
@@ -23,17 +27,17 @@ class PptxTranslator(BaseTranslator):
 
         for s_idx, slide in enumerate(pres.slides):
             for sh_idx, shape in enumerate(slide.shapes):
-                if not shape.has_text_frame:
-                    continue
-                text_frame = shape.text_frame
-                for p_idx, paragraph in enumerate(text_frame.paragraphs):
-                    text = paragraph.text.strip()
-                    if not text:
-                        continue
-                    seg_id = f"s{s_idx}_sh{sh_idx}_p{p_idx}_{uuid.uuid4().hex[:8]}"
-                    segments.append({"id": seg_id, "text": text})
+                # Shape text
+                if shape.has_text_frame:
+                    text_frame = shape.text_frame
+                    for p_idx, paragraph in enumerate(text_frame.paragraphs):
+                        text = paragraph.text.strip()
+                        if not text:
+                            continue
+                        seg_id = f"s{s_idx}_sh{sh_idx}_p{p_idx}_{uuid.uuid4().hex[:8]}"
+                        segments.append({"id": seg_id, "text": text})
 
-                # Tables inside shapes are handled separately
+                # Table text
                 if shape.has_table:
                     table = shape.table
                     for r_idx, row in enumerate(table.rows):
@@ -41,12 +45,17 @@ class PptxTranslator(BaseTranslator):
                             cell_text = cell.text.strip()
                             if not cell_text:
                                 continue
-                            seg_id = f"s{s_idx}_tbl{sh_idx}_r{r_idx}_c{c_idx}_{uuid.uuid4().hex[:8]}"
+                            seg_id = f"s{s_idx}_tbl{sh_idx}_r{r_idx}_c_{c_idx}_{uuid.uuid4().hex[:8]}"
                             segments.append({"id": seg_id, "text": cell_text})
 
         return segments
 
-    def _apply_translations(self, pres: Presentation, segments: List[Dict[str, str]], id_to_translation: Dict[str, str]) -> None:
+    def _apply_translations(
+        self,
+        pres: Presentation,
+        segments: List[Dict[str, str]],
+        id_to_translation: Dict[str, str],
+    ) -> None:
         ordered_ids = [s["id"] for s in segments]
         id_iter = iter(ordered_ids)
 
