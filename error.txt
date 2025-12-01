@@ -1,21 +1,17 @@
-from translators import get_translators
+---------------------------------------------------------------------------
+ImportError                               Traceback (most recent call last)
+Cell In[1], line 7
+      5 from ai_translation_logger import logger
+      6 from ai_translation_output_manager import OutputManager
+----> 7 from ai_translation_oai_client import OaiClient
+      8 from translators import get_translators
+      9 from ai_translation_utils import list_blobs, process_blob
 
-oai_client = OaiClient()
-translators = get_translators(oai_client)
+File c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-letter-translation\ai_translation_oai_client.py:9
+      7 from ai_translation_config_loader import ConfigLoader
+      8 from ai_translation_logger import logger
+----> 9 from ai_translation_utils import UtilityFunctions
+     12 class OaiClient:
+     13     def __init__(self):
 
-===================
-# translators/pptx_translator.py
-
-from ai_translation_logger import logger
-from ai_translation_utils import UtilityFunctions
-from ai_translation_oai_client import OaiClient
-from pptx import Presentation
-# ... any other imports ...
-
-
-class PptxTranslator:
-    def __init__(self, oai_client: OaiClient):
-        self.oai_client = oai_client
-
-    # keep your existing can_handle(...) + translate_document(...) here
-    # just make sure any usage of self.oai_client still works
+ImportError: cannot import name 'UtilityFunctions' from 'ai_translation_utils' (c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-letter-translation\ai_translation_utils.py)
