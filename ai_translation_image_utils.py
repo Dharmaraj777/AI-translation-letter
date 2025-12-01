@@ -1,187 +1,105 @@
-# ai_translation_image_utils.py
+# ai_translation_oai_client.py
 
-import io
-from typing import Any, Dict, List, Optional
+import json
+import base64
+from typing import List, Dict, Optional
 
+from openai import AzureOpenAI
+from ai_translation_config_loader import ConfigLoader
 from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions  # if you have it
 
-# Optional OCR / image libs
-try:
-    from PIL import Image, ImageDraw, ImageFont
-    import pytesseract
-    OCR_AVAILABLE = True
-except ImportError:
-    OCR_AVAILABLE = False
-    Image = None
-    ImageDraw = None
-    ImageFont = None
-    pytesseract = None
+class OaiClient:
+    def __init__(self):
+        cfg = ConfigLoader.get_instance()
+        self.openai_api_base = cfg.openai_api_base
+        self.openai_api_key = cfg.openai_api_key
+        self.openai_api_version = cfg.openai_api_version
+        self.deployment_id = cfg.deployment_id
 
+        self.target_language = getattr(cfg, "target_language", "French")
+        self.target_dialect = getattr(cfg, "target_dialect", "France")
 
-def _ocr_image_to_segments(image_bytes: bytes) -> List[Dict[str, Any]]:
-    """
-    Use Tesseract OCR to extract text + bounding boxes from the image.
-
-    Returns a list of dicts:
-      {
-        "id": "seg-<n>",
-        "text": "original text",
-        "left": int,
-        "top": int,
-        "width": int,
-        "height": int
-      }
-    """
-    if not OCR_AVAILABLE:
-        logger.warning(
-            "OCR libraries (Pillow / pytesseract) not available. "
-            "Install 'Pillow' and 'pytesseract' and ensure Tesseract is installed "
-            "if you want image text translation."
-        )
-        return []
-
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-
-    # pytesseract.image_to_data gives per-word / per-segment boxes
-    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
-
-    segments: List[Dict[str, Any]] = []
-    n = len(data["text"])
-    seg_idx = 0
-    for i in range(n):
-        text = data["text"][i]
-        conf = data["conf"][i]
-        if not text or not text.strip():
-            continue
-        try:
-            conf_val = float(conf)
-        except ValueError:
-            conf_val = -1.0
-
-        # Filter out very low confidence noise
-        if conf_val < 0:
-            continue
-
-        left = data["left"][i]
-        top = data["top"][i]
-        width = data["width"][i]
-        height = data["height"][i]
-
-        seg_id = f"img_seg_{seg_idx}"
-        seg_idx += 1
-
-        segments.append(
-            {
-                "id": seg_id,
-                "text": text,
-                "left": left,
-                "top": top,
-                "width": width,
-                "height": height,
-            }
+        self.client = AzureOpenAI(
+            api_key=self.openai_api_key,
+            api_version=self.openai_api_version,
+            azure_endpoint=self.openai_api_base,
         )
 
-    return segments
+    # your existing translate_segments(...) goes here
+    # ...
 
+    def translate_image_to_language(
+        self,
+        image_bytes: bytes,
+        content_type: str = "image/png",
+        target_language: Optional[str] = None,
+        target_dialect: Optional[str] = None,
+    ) -> str:
+        """
+        Use GPT-4.1 vision to:
+          - read all text from the image
+          - translate it into the target language
+          - return ONLY the translated text (plain / Markdown-friendly)
 
-def _draw_translated_text_on_image(
-    image_bytes: bytes,
-    segments: List[Dict[str, Any]],
-    id_to_translation: Dict[str, str],
-) -> bytes:
-    """
-    Take an image and overlay translated text in the same bounding boxes.
+        This is similar to eFax get_fax_number / identify_urgent_efaxes,
+        but specialized for translation.
+        """
+        lang = target_language or self.target_language
+        dialect = target_dialect or self.target_dialect
 
-    - Draws a white rectangle over the original text box.
-    - Writes the translated text on top (single line).
-    """
-    if not OCR_AVAILABLE:
-        return image_bytes
+        system_message = f"""
+You are a professional document translator.
 
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    draw = ImageDraw.Draw(img)
+You will be shown an IMAGE extracted from a Word document. It may contain:
+- a table rendered as an image
+- headings, paragraphs, labels, or mixed content
 
-    # Use a default font (can be customized if needed)
-    try:
-        font = ImageFont.load_default()
-    except Exception:
-        font = None
+Your task:
+1. Read all text you can clearly see in the image.
+2. Translate ALL readable text into {lang}.
+3. Preserve the structure as best you can using plain text:
+   - If it is a table, use a simple text layout or Markdown table.
+   - If it is multiple labeled fields, keep them on separate lines.
 
-    for seg in segments:
-        seg_id = seg["id"]
-        orig_text = seg["text"]
-        translated = id_to_translation.get(seg_id, None)
-        if not translated:
-            # If no translation, keep original text as fallback
-            translated = orig_text
+Important:
+- Do NOT add explanations or commentary.
+- Do NOT invent new content.
+- Do NOT include the original language, only the translated text.
+- Output ONLY the translated text (plain text or simple Markdown), nothing else.
+"""
 
-        left = seg["left"]
-        top = seg["top"]
-        width = seg["width"]
-        height = seg["height"]
+        user_prompt = f"""
+Translate all readable text in this image into {lang}.
+If it looks like a table, keep a table-like layout in text form.
+Output only the translated content.
+"""
 
-        # Draw a white rectangle over the original text region
-        # Slightly expand the box to avoid clipping
-        pad = 2
-        box = [
-            left - pad,
-            top - pad,
-            left + width + pad,
-            top + height + pad,
-        ]
-        draw.rectangle(box, fill="white")
+        b64 = base64.b64encode(image_bytes).decode("utf-8")
+        mime = content_type or "image/png"
+        image_url = {"url": f"data:{mime};base64,{b64}"}
 
-        # Write the translated text in the same region
-        # (no wrapping logic here; for long text it may overflow)
-        text_x = left
-        text_y = top
-        draw.text((text_x, text_y), translated, fill="black", font=font)
-
-    out = io.BytesIO()
-    img.save(out, format=img.format or "PNG")
-    out.seek(0)
-    return out.read()
-
-
-def translate_image_with_ocr_and_gpt(
-    image_bytes: bytes,
-    oai_client: Any,
-    target_language: Optional[str] = None,
-    target_dialect: Optional[str] = None,
-) -> Optional[bytes]:
-    """
-    Full pipeline for a single image:
-      1) OCR -> segments with bounding boxes
-      2) GPT translation for each segment.text
-      3) Draw translated text back on a copy of the image
-
-    Returns:
-      - New image bytes if we found text and translation succeeded
-      - None if no text was found (or OCR unavailable)
-    """
-    segments = _ocr_image_to_segments(image_bytes)
-    if not segments:
-        logger.info("No OCR text segments found in image; leaving image unchanged.")
-        return None
-
-    # Prepare segments for GPT translation
-    text_segments = [{"id": seg["id"], "text": seg["text"]} for seg in segments]
-
-    try:
-        id_to_translation = oai_client.translate_segments(
-            text_segments,
-            target_language=target_language,
-            target_dialect=target_dialect,
+        logger.info("Calling GPT-4.1 vision to translate image text...")
+        response = self.client.chat.completions.create(
+            model=self.deployment_id,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_message,
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_prompt},
+                        {"type": "image_url", "image_url": image_url},
+                    ],
+                },
+            ],
+            temperature=0.1,
+            max_tokens=2048,
+            top_p=1,
         )
-    except Exception as e:
-        logger.error(f"Failed to translate OCR segments with GPT: {e}")
-        return None
 
-    try:
-        new_image_bytes = _draw_translated_text_on_image(
-            image_bytes, segments, id_to_translation
-        )
-        return new_image_bytes
-    except Exception as e:
-        logger.error(f"Failed to draw translated text on image: {e}")
-        return None
+        translated_text = response.choices[0].message.content.strip()
+        logger.debug(f"[image translation] raw model output: {translated_text}")
+        return translated_text
