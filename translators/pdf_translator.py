@@ -1,7 +1,8 @@
 from typing import Optional
+
 from .base_translator import BaseTranslator
-from ..translation_logger import logger
-from ..translation_utils import UtilityFunctions
+from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions
 
 
 class PdfTranslator(BaseTranslator):
