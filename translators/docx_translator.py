@@ -1,3 +1,5 @@
+# translators/docx_translator.py
+
 import io
 import textwrap
 from typing import List, Dict, Optional
@@ -7,12 +9,12 @@ from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .base_translator import BaseTranslator
 from ai_translation_logger import logger
 from ai_translation_utils import UtilityFunctions
+from ai_translation_oai_client import OaiClient
 
 
-class DocxTranslator(BaseTranslator):
+class DocxTranslator:
     """
     DOCX translator.
 
@@ -25,6 +27,9 @@ class DocxTranslator(BaseTranslator):
             - We render the translated text into a new image (same size, white background)
             - Replace the image in the DOCX with this translated version.
     """
+
+    def __init__(self, oai_client: OaiClient):
+        self.oai_client = oai_client
 
     def can_handle(self, filename: str) -> bool:
         return UtilityFunctions.get_extension(filename) == ".docx"
@@ -91,8 +96,63 @@ class DocxTranslator(BaseTranslator):
                                 run.text = id_to_translation[seg_id]
 
     # ---------------------------------------------------------
-    # IMAGES: GPT-4.1 vision + redraw
+    # IMAGES: markdown-table parser + GPT-4.1 vision + redraw
     # ---------------------------------------------------------
+    def _parse_markdown_table(self, translated_text: str):
+        """
+        Very lightweight parser for Markdown-style tables that GPT returns, e.g.:
+
+            Exemple de récompense
+
+            | Points         | Montant      |
+            |----------------|--------------|
+            | 200 points     | 10 $         |
+            | 500 points     | 25 $         |
+
+        Returns:
+            title_lines: list[str]  (lines before the first table row)
+            rows: list[list[str]]   (each row is a list of cell strings)
+        """
+        lines = [l.rstrip() for l in translated_text.splitlines()]
+
+        title_lines: list[str] = []
+        table_lines: list[str] = []
+        in_table = False
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("|") and "|" in stripped[1:]:
+                in_table = True
+                if not stripped.endswith("|"):
+                    stripped = stripped + "|"
+                table_lines.append(stripped)
+            else:
+                if not in_table:
+                    if stripped:
+                        title_lines.append(stripped)
+
+        if not table_lines:
+            return title_lines, []
+
+        parsed_rows = []
+        for ln in table_lines:
+            inner = ln.strip().strip("|")
+            parts = [p.strip() for p in inner.split("|")]
+
+            is_sep = all(not p or set(p) <= {"-", ":"} for p in parts)
+            if is_sep:
+                continue
+
+            parsed_rows.append(parts)
+
+        if not parsed_rows:
+            return title_lines, []
+
+        n_cols = len(parsed_rows[0])
+        cleaned_rows = [row for row in parsed_rows if len(row) == n_cols]
+
+        return title_lines, cleaned_rows
+
     def _render_translated_image(
         self,
         original_bytes: bytes,
@@ -100,8 +160,9 @@ class DocxTranslator(BaseTranslator):
         content_type: str,
     ) -> bytes:
         """
-        Create a new image same size as original, white background,
-        and draw the translated text with simple word wrapping.
+        Create a new image same size as original, white background, and:
+        - If GPT returned a Markdown-like table, draw a table (title + grid)
+        - Otherwise, draw wrapped text
         """
         try:
             orig_img = Image.open(io.BytesIO(original_bytes)).convert("RGB")
@@ -118,17 +179,7 @@ class DocxTranslator(BaseTranslator):
         except Exception:
             font = None
 
-        margin = 20
-
-        # Simple char-based wrapping (~60 chars per line)
-        wrapped_lines: List[str] = []
-        for paragraph in translated_text.splitlines():
-            if not paragraph.strip():
-                wrapped_lines.append("")
-                continue
-            wrapped_lines.extend(textwrap.wrap(paragraph, width=60))
-
-        # Compute line height safely (no font.getsize)
+        # Safe line height
         if font is not None:
             try:
                 ascent, descent = font.getmetrics()
@@ -138,12 +189,86 @@ class DocxTranslator(BaseTranslator):
         else:
             line_height = 16
 
-        y = margin
-        for line in wrapped_lines:
-            if y + line_height > height - margin:
-                break
-            draw.text((margin, y), line, fill="black", font=font)
-            y += line_height
+        margin = 20
+
+        # Try table mode first
+        title_lines, table_rows = self._parse_markdown_table(translated_text)
+
+        if table_rows:
+            logger.info("[image] Rendering translated image as table layout.")
+
+            # 1) Draw title
+            y = margin
+            if title_lines:
+                for line in title_lines:
+                    if y + line_height > height - margin:
+                        break
+                    draw.text((margin, y), line, fill="black", font=font)
+                    y += line_height + 4
+                y += 8
+
+            # 2) Column widths
+            n_cols = len(table_rows[0])
+            col_lengths = [0] * n_cols
+            for row in table_rows:
+                for j, cell in enumerate(row):
+                    col_lengths[j] = max(col_lengths[j], len(cell))
+
+            total_len = sum(col_lengths) or 1
+            available_width = width - 2 * margin
+            col_widths = []
+            for L in col_lengths:
+                w_j = max(int(available_width * (L / total_len)), 80)
+                col_widths.append(w_j)
+
+            scale = available_width / float(sum(col_widths))
+            col_widths = [int(w * scale) for w in col_widths]
+
+            table_top = y
+            row_height = line_height + 10
+
+            for row_idx, row in enumerate(table_rows):
+                x = margin
+                row_top = table_top + row_idx * row_height
+                row_bottom = row_top + row_height
+
+                if row_bottom > height - margin:
+                    break
+
+                for col_idx, cell_text in enumerate(row):
+                    col_width = col_widths[col_idx]
+                    cell_left = x
+                    cell_right = x + col_width
+
+                    draw.rectangle(
+                        [cell_left, row_top, cell_right, row_bottom],
+                        outline="black",
+                        width=1,
+                    )
+
+                    text_x = cell_left + 5
+                    text_y = row_top + (row_height - line_height) // 2
+
+                    draw.text((text_x, text_y), cell_text, fill="black", font=font)
+
+                    x += col_width
+
+        else:
+            # Fallback: plain wrapped text
+            logger.info("[image] No markdown table detected; rendering as wrapped text.")
+            wrapped_lines: List[str] = []
+            for paragraph in translated_text.splitlines():
+                if not paragraph.strip():
+                    wrapped_lines.append("")
+                    continue
+                wrapped_lines.extend(textwrap.wrap(paragraph, width=60))
+
+            y = margin
+            for line in wrapped_lines:
+                if y + line_height > height - margin:
+                    break
+                draw.text((margin, y), line, fill="black", font=font)
+                y += line_height
 
         out = io.BytesIO()
         fmt = "PNG"
@@ -159,12 +284,6 @@ class DocxTranslator(BaseTranslator):
         target_language: Optional[str] = None,
         target_dialect: Optional[str] = None,
     ) -> None:
-        """
-        For each embedded image:
-          - send to GPT-4.1 vision for translation
-          - redraw image with translated text
-          - replace image bytes in the DOCX part
-        """
         image_count = 0
         translated_count = 0
 
@@ -174,7 +293,7 @@ class DocxTranslator(BaseTranslator):
 
             image_count += 1
             image_part = rel.target_part
-            original_bytes = image_part.blob  # read-only property is OK to read
+            original_bytes = image_part.blob
             content_type = getattr(image_part, "content_type", "image/png")
 
             logger.info(f"[image] Found image rel_id={rel_id}, content_type={content_type}")
@@ -205,9 +324,8 @@ class DocxTranslator(BaseTranslator):
                     translated_text,
                     content_type,
                 )
-                # IMPORTANT: in your python-docx version, .blob is read-only.
-                # We must set the private attribute _blob instead.
-                image_part._blob = new_bytes  # <-- key fix
+                # Use private _blob because .blob is read-only in your python-docx version
+                image_part._blob = new_bytes
                 translated_count += 1
                 logger.info(f"[image] Replaced image (rel_id={rel_id}) with translated version.")
             except Exception as e:
