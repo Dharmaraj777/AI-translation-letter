@@ -4,3 +4,18 @@ oai_client = OaiClient()
 translators = get_translators(oai_client)
 
 ===================
+# translators/pptx_translator.py
+
+from ai_translation_logger import logger
+from ai_translation_utils import UtilityFunctions
+from ai_translation_oai_client import OaiClient
+from pptx import Presentation
+# ... any other imports ...
+
+
+class PptxTranslator:
+    def __init__(self, oai_client: OaiClient):
+        self.oai_client = oai_client
+
+    # keep your existing can_handle(...) + translate_document(...) here
+    # just make sure any usage of self.oai_client still works
