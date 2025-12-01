@@ -1,73 +1,229 @@
-# in ai_translation_utils.py
-import os
+# translators/pdf_translator.py
 
-class UtilityFunctions:
-    # ... existing stuff ...
+import io
+from typing import Optional, List, Dict, Tuple
 
-    @staticmethod
-    def replace_extension(filename: str, new_ext: str) -> str:
-        base, _ = os.path.splitext(filename)
-        return base + new_ext
+import fitz  # PyMuPDF
+from PIL import Image, ImageDraw, ImageFont
 
-==========================================
-
-# ai_translation_utils.py
-import os
-
-class UtilityFunctions:
-    # ... your existing methods (get_extension, etc.) ...
-
-    @staticmethod
-    def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
-        """
-        Build the translated file name.
-
-        Rules:
-        - For PDF input, our PdfTranslator returns a DOCX, so output extension must be .docx
-        - For DOCX/PPTX (and others), keep same extension and just add the suffix
-        """
-        base, ext = os.path.splitext(input_name)
-        ext_lower = ext.lower()
-
-        if ext_lower == ".pdf":
-            # PDF -> translated DOCX
-            return f"{base}{lang_suffix}.docx"
-        else:
-            # DOCX, PPTX, etc. keep extension
-            return f"{base}{lang_suffix}{ext}"
-
-========================================
-
+from .base_translator import BaseTranslator
+from ai_translation_logger import logger
 from ai_translation_utils import UtilityFunctions
-from ai_translation_output_manager import OutputManager
-from ai_translation_oai_client import OaiClient
-from translators import get_translators  # or similar
 
-def main():
-    # ... set up blob clients, oai_client, translators, etc. ...
-    oai_client = OaiClient()
-    output_manager = OutputManager()
-    translators = get_translators(oai_client)
 
-    for blob_name in input_blob_names:
-        logger.info(f"Processing blob: {blob_name}")
-        content_bytes = download_blob(blob_name)
+class PdfTranslator(BaseTranslator):
+    """
+    PDF translator.
 
-        translator = select_translator(blob_name, translators)  # however you do this
-        translated_bytes = translator.translate_document(
-            blob_name,
-            content_bytes,
-            target_language="French",
-            target_dialect="France",
-        )
+    Strategy (per page):
+      1) Extract all text spans + bounding boxes via PyMuPDF.
+      2) Translate those text spans with OaiClient.translate_segments().
+      3) Render the original page to an image (keeps layout, shapes, graphics).
+      4) For each span, cover the original text region with white and draw
+         the translated text at the same position.
+      5) Build a new PDF from the translated page images.
 
-        # ❌ OLD (hard-coded)
-        # base, ext = os.path.splitext(blob_name)
-        # output_blob_name = f"{base}_fr{ext}"
+    Notes:
+      - This preserves the visual structure much better than "plain text PDF".
+      - Only works on text that is *real text* in the PDF, not scanned images.
+      - Text inside images will remain untranslated (for now).
+    """
 
-        # ✅ NEW (uses our rule: PDF -> DOCX)
-        output_blob_name = UtilityFunctions.make_output_name(blob_name, "_fr")
+    def can_handle(self, filename: str) -> bool:
+        return UtilityFunctions.get_extension(filename) == ".pdf"
 
-        logger.info(f"Uploading translated file: {output_blob_name}")
-        output_manager.upload_translated_blob(output_blob_name, translated_bytes)
-        logger.info(f"[STATUS] {blob_name} -> SUCCESS (Output: {output_blob_name})")
+    # ---------------------------------------------------------
+    # Internal: extract text spans and bounding boxes
+    # ---------------------------------------------------------
+    def _extract_page_spans(
+        self,
+        page: fitz.Page,
+        page_index: int,
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, object]]]:
+        """
+        Use page.get_text('dict') to extract spans with text + bbox.
+
+        Returns:
+          segments: list of {"id": <seg_id>, "text": <text>}
+          spans_meta: list of {"id": <seg_id>, "bbox": [x0,y0,x1,y1]}
+        """
+        text_dict = page.get_text("dict")
+        segments: List[Dict[str, str]] = []
+        spans_meta: List[Dict[str, object]] = []
+
+        for b_idx, block in enumerate(text_dict.get("blocks", [])):
+            # block["type"] == 0 => text
+            if block.get("type", 1) != 0:
+                continue
+
+            for l_idx, line in enumerate(block.get("lines", [])):
+                for s_idx, span in enumerate(line.get("spans", [])):
+                    text = span.get("text", "")
+                    if not text or not text.strip():
+                        continue
+
+                    seg_id = f"p{page_index}-b{b_idx}-l{l_idx}-s{s_idx}"
+                    segments.append({"id": seg_id, "text": text})
+                    spans_meta.append(
+                        {
+                            "id": seg_id,
+                            "bbox": span.get("bbox", [0, 0, 0, 0]),  # [x0, y0, x1, y1]
+                        }
+                    )
+
+        return segments, spans_meta
+
+    # ---------------------------------------------------------
+    # Internal: overlay translated text on page image
+    # ---------------------------------------------------------
+    def _overlay_translations_on_page_image(
+        self,
+        page: fitz.Page,
+        segments: List[Dict[str, str]],
+        spans_meta: List[Dict[str, object]],
+        id_to_translation: Dict[str, str],
+        dpi: int = 200,
+    ) -> bytes:
+        """
+        Render page to an image and overlay translated text spans.
+        Returns PNG bytes of the new translated page image.
+        """
+        # Render original page to pixmap
+        pix = page.get_pixmap(dpi=dpi)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        draw = ImageDraw.Draw(img)
+
+        # Basic font
+        try:
+            font = ImageFont.load_default()
+        except Exception:
+            font = None
+
+        # Scaling from PDF coordinates to image pixels
+        page_rect = page.rect  # fitz.Rect
+        scale_x = pix.width / float(page_rect.width or 1.0)
+        scale_y = pix.height / float(page_rect.height or 1.0)
+
+        for span in spans_meta:
+            seg_id = span["id"]
+            bbox = span["bbox"]  # [x0, y0, x1, y1]
+            if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+                continue
+
+            x0, y0, x1, y1 = bbox
+            px0 = int(x0 * scale_x)
+            py0 = int(y0 * scale_y)
+            px1 = int(x1 * scale_x)
+            py1 = int(y1 * scale_y)
+
+            # Translation for this span
+            new_text = id_to_translation.get(seg_id)
+            if not new_text or not new_text.strip():
+                # Fallback: keep original text if translation missing
+                orig = next((s["text"] for s in segments if s["id"] == seg_id), "")
+                new_text = orig
+
+            # Cover original text area with white (assumes light background;
+            # for colored backgrounds, this will show a white patch)
+            draw.rectangle([px0, py0, px1, py1], fill="white")
+
+            # Draw translated text at top-left of the bbox
+            draw.text((px0, py0), new_text, fill="black", font=font)
+
+        out = io.BytesIO()
+        img.save(out, format="PNG")
+        out.seek(0)
+        return out.read()
+
+    # ---------------------------------------------------------
+    # Public: translate whole PDF
+    # ---------------------------------------------------------
+    def translate_document(
+        self,
+        filename: str,
+        content_bytes: bytes,
+        target_language: Optional[str] = None,
+        target_dialect: Optional[str] = None,
+    ) -> bytes:
+        logger.info(f"Translating PDF by overlaying translated text on pages: {filename}")
+
+        try:
+            src_doc = fitz.open(stream=content_bytes, filetype="pdf")
+        except Exception as e:
+            logger.error(f"[PDF] Failed to open PDF '{filename}': {e}")
+            return content_bytes
+
+        out_doc = fitz.open()
+
+        try:
+            for page_index in range(len(src_doc)):
+                page = src_doc.load_page(page_index)
+                logger.info(f"[PDF] Processing page {page_index + 1}/{len(src_doc)}")
+
+                # 1) Extract text spans
+                segments, spans_meta = self._extract_page_spans(page, page_index)
+
+                if not segments:
+                    logger.info(
+                        f"[PDF] No text spans found on page {page_index + 1}; "
+                        f"embedding original page image."
+                    )
+                    # Just copy page as image
+                    pix = page.get_pixmap(dpi=200)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    buf.seek(0)
+
+                    new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
+                    new_page.insert_image(new_page.rect, stream=buf.getvalue())
+                    continue
+
+                # 2) Translate all segments on this page using GPT-4.1 (text, not vision)
+                try:
+                    logger.info(
+                        f"[PDF] Translating {len(segments)} spans on page {page_index + 1} via Azure OpenAI..."
+                    )
+                    id_to_translation = self.oai_client.translate_segments(
+                        segments,
+                        target_language=target_language,
+                        target_dialect=target_dialect,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"[PDF] Translation failed for page {page_index + 1}: {e}. "
+                        f"Embedding original page image."
+                    )
+                    pix = page.get_pixmap(dpi=200)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    buf.seek(0)
+
+                    new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
+                    new_page.insert_image(new_page.rect, stream=buf.getvalue())
+                    continue
+
+                # 3) Render new page image with translated text overlaid
+                translated_png = self._overlay_translations_on_page_image(
+                    page,
+                    segments,
+                    spans_meta,
+                    id_to_translation,
+                    dpi=200,
+                )
+
+                # 4) Create corresponding page in output PDF
+                new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
+                new_page.insert_image(new_page.rect, stream=translated_png)
+
+        finally:
+            src_doc.close()
+
+        out_stream = io.BytesIO()
+        out_doc.save(out_stream)
+        out_doc.close()
+        out_stream.seek(0)
+
+        logger.info(f"[PDF] Finished translating PDF '{filename}'. Pages: {len(out_doc) if out_doc else 0}")
+        return out_stream.read()
