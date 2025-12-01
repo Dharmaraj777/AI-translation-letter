@@ -2,12 +2,16 @@
 
 import json
 import base64
+import io
 from typing import List, Dict, Optional
 
 from openai import AzureOpenAI
+from PIL import Image
+
 from ai_translation_config_loader import ConfigLoader
 from ai_translation_logger import logger
-from ai_translation_utils import UtilityFunctions  # if you have it
+from ai_translation_utils import UtilityFunctions  # if you use it
+
 
 class OaiClient:
     def __init__(self):
@@ -26,8 +30,33 @@ class OaiClient:
             azure_endpoint=self.openai_api_base,
         )
 
-    # your existing translate_segments(...) goes here
-    # ...
+    # ------------------------------------------
+    # Existing translate_segments(...) stays here
+    # ------------------------------------------
+
+    def _prepare_image_for_vision(self, image_bytes: bytes) -> bytes:
+        """
+        Normalize and upscale the image so GPT-4.1 can read small text better:
+        - Convert to RGB
+        - If max dimension < 800 px, scale up to ~1024 px on the longer side
+        - Encode as PNG
+        """
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        w, h = img.size
+
+        # Upscale small images so tiny words like "rewards" are readable
+        max_dim = max(w, h)
+        if max_dim < 800:
+            scale = 1024 / max_dim
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+            logger.info(f"Upscaled image from {w}x{h} to {new_w}x{new_h} for vision OCR.")
+
+        out = io.BytesIO()
+        img.save(out, format="PNG")
+        out.seek(0)
+        return out.read()
 
     def translate_image_to_language(
         self,
@@ -40,10 +69,9 @@ class OaiClient:
         Use GPT-4.1 vision to:
           - read all text from the image
           - translate it into the target language
-          - return ONLY the translated text (plain / Markdown-friendly)
+          - return ONLY the translated text (plain / Markdown)
 
-        This is similar to eFax get_fax_number / identify_urgent_efaxes,
-        but specialized for translation.
+        This is similar to your eFax vision calls, but for translation.
         """
         lang = target_language or self.target_language
         dialect = target_dialect or self.target_dialect
@@ -53,31 +81,31 @@ You are a professional document translator.
 
 You will be shown an IMAGE extracted from a Word document. It may contain:
 - a table rendered as an image
-- headings, paragraphs, labels, or mixed content
+- headings, labels, or multiple pieces of text
 
 Your task:
-1. Read all text you can clearly see in the image.
-2. Translate ALL readable text into {lang}.
-3. Preserve the structure as best you can using plain text:
-   - If it is a table, use a simple text layout or Markdown table.
-   - If it is multiple labeled fields, keep them on separate lines.
+1. Read ALL clearly visible text in the image.
+2. Translate ALL of that text into {lang}.
+3. Preserve the logical structure as plain text or simple Markdown:
+   - If it looks like a table, keep a table-like layout.
+   - If there are headings, keep them on separate lines.
 
 Important:
 - Do NOT add explanations or commentary.
-- Do NOT invent new content.
-- Do NOT include the original language, only the translated text.
-- Output ONLY the translated text (plain text or simple Markdown), nothing else.
+- Do NOT include the original language.
+- Output ONLY the translated text (plain/Markdown), nothing else.
 """
 
         user_prompt = f"""
-Translate all readable text in this image into {lang}.
-If it looks like a table, keep a table-like layout in text form.
+Translate ALL readable text in this image into {lang}.
+If it looks like a table, keep a table-like layout.
 Output only the translated content.
 """
 
-        b64 = base64.b64encode(image_bytes).decode("utf-8")
-        mime = content_type or "image/png"
-        image_url = {"url": f"data:{mime};base64,{b64}"}
+        # Normalize & upscale
+        norm_bytes = self._prepare_image_for_vision(image_bytes)
+        b64 = base64.b64encode(norm_bytes).decode("utf-8")
+        image_url = {"url": f"data:image/png;base64,{b64}"}
 
         logger.info("Calling GPT-4.1 vision to translate image text...")
         response = self.client.chat.completions.create(
@@ -96,10 +124,10 @@ Output only the translated content.
                 },
             ],
             temperature=0.1,
-            max_tokens=2048,
+            max_tokens=1024,
             top_p=1,
         )
 
         translated_text = response.choices[0].message.content.strip()
-        logger.debug(f"[image translation] raw model output: {translated_text}")
+        logger.info(f"[image translation] GPT output (first 120 chars): {translated_text[:120]!r}")
         return translated_text
