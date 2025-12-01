@@ -1,7 +1,8 @@
 import io
 import json
 import os
-from typing import Iterable, List, Dict
+from typing import Iterable, List, Dict, Any
+
 from azure.storage.blob import ContainerClient, BlobClient
 from ai_translation_logger import logger
 
@@ -9,71 +10,130 @@ from ai_translation_logger import logger
 ALLOWED_EXTENSIONS = {".docx", ".pptx", ".pdf"}
 
 
-class UtilityFunctions:
-    @staticmethod
-    def get_extension(filename: str) -> str:
-        return os.path.splitext(filename)[1].lower()
+# -----------------------------
+# Generic helpers
+# -----------------------------
+def get_extension(filename: str) -> str:
+    return os.path.splitext(filename)[1].lower()
 
-    @staticmethod
-    def is_supported_document(filename: str) -> bool:
-        return UtilityFunctions.get_extension(filename) in ALLOWED_EXTENSIONS
 
-    @staticmethod
-    def list_blobs(container_client: ContainerClient) -> List[str]:
-        blob_names = []
-        for blob in container_client.list_blobs():
-            blob_names.append(blob.name)
-        return blob_names
+def is_supported_document(filename: str) -> bool:
+    return get_extension(filename) in ALLOWED_EXTENSIONS
 
-    @staticmethod
-    def download_blob_to_bytes(blob_client: BlobClient) -> bytes:
-        logger.info(f"Downloading blob: {blob_client.blob_name}")
-        downloader = blob_client.download_blob()
-        return downloader.readall()
 
-    @staticmethod
-    def upload_bytes_to_blob(
-        container_client: ContainerClient,
-        blob_name: str,
-        data: bytes,
-        overwrite: bool = True,
-    ) -> None:
-        logger.info(f"Uploading translated file: {blob_name}")
-        container_client.upload_blob(name=blob_name, data=data, overwrite=overwrite)
+def list_blobs(container_client: ContainerClient) -> List[str]:
+    blob_names: List[str] = []
+    for blob in container_client.list_blobs():
+        blob_names.append(blob.name)
+    return blob_names
 
-    @staticmethod
-    def chunk_list(items: List, chunk_size: int) -> Iterable[List]:
-        for i in range(0, len(items), chunk_size):
-            yield items[i : i + chunk_size]
 
-    @staticmethod
-    def safe_json_loads(text: str) -> Dict:
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from model output: {e}")
-            raise
+def download_blob_to_bytes(blob_client: BlobClient) -> bytes:
+    logger.info(f"Downloading blob: {blob_client.blob_name}")
+    downloader = blob_client.download_blob()
+    return downloader.readall()
 
-    @staticmethod
-    def replace_extension(filename: str, new_ext: str) -> str:
-        base, _ = os.path.splitext(filename)
-        return base + new_ext
-    
-    @staticmethod
-    def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
-        """
-        Build the translated file name.
 
-        Rules:
-        - For PDF input, our PdfTranslator returns a DOCX, so output extension must be .docx
-        - For DOCX/PPTX (and others), keep same extension and just add the suffix
-        """
-        base, ext = os.path.splitext(input_name)
-        ext_lower = ext.lower()
+def chunk_list(items: List[Any], chunk_size: int) -> Iterable[List[Any]]:
+    for i in range(0, len(items), chunk_size):
+        yield items[i : i + chunk_size]
 
-        if ext_lower == ".pdf":
-            # PDF -> translated DOCX
-            return f"{base}{lang_suffix}.docx"
-        else:
-            # DOCX, PPTX, etc. keep extension
-            return f"{base}{lang_suffix}{ext}"
+
+def safe_json_loads(text: str) -> Dict:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON from model output: {e}")
+        raise
+
+
+def replace_extension(filename: str, new_ext: str) -> str:
+    base, _ = os.path.splitext(filename)
+    return base + new_ext
+
+
+def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
+    """
+    Build the translated file name.
+
+    Current rule:
+    - Keep the same extension and append the language suffix to the base name.
+      e.g., "file.docx" -> "file_fr.docx"
+            "brochure.pdf" -> "brochure_fr.pdf"
+    """
+    base, ext = os.path.splitext(input_name)
+    return f"{base}{lang_suffix}{ext}"
+
+
+# -----------------------------
+# Pipeline helpers
+# -----------------------------
+def find_translator(filename: str, translators) -> Any:
+    """
+    Find the first translator instance that can_handle() this filename.
+    """
+    for t in translators:
+        if t.can_handle(filename):
+            return t
+    return None
+
+
+def process_blob(
+    blob_name: str,
+    cfg: Any,
+    translators,
+    output_manager: Any,
+) -> None:
+    """
+    Orchestrates translation for a single blob:
+      - validates extension
+      - finds proper translator
+      - downloads blob
+      - calls translator
+      - uploads translated file via OutputManager
+      - logs status via OutputManager
+    """
+    if not is_supported_document(blob_name):
+        ext = get_extension(blob_name)
+        logger.info(f"Skipping unsupported file type: {blob_name}")
+        output_manager.log_status(blob_name, "SKIPPED_UNSUPPORTED", f"Extension: {ext}")
+        return
+
+    translator = find_translator(blob_name, translators)
+    if not translator:
+        logger.info(f"No translator found for file: {blob_name}")
+        output_manager.log_status(blob_name, "NO_TRANSLATOR", "")
+        return
+
+    input_container: ContainerClient = cfg.input_container_client
+
+    blob_client: BlobClient = input_container.get_blob_client(blob_name)
+    try:
+        content_bytes = download_blob_to_bytes(blob_client)
+    except Exception as e:
+        logger.error(f"Failed to download blob {blob_name}: {e}")
+        output_manager.log_status(blob_name, "DOWNLOAD_FAILED", str(e))
+        return
+
+    try:
+        translated_bytes = translator.translate_document(
+            blob_name,
+            content_bytes,
+            target_language=cfg.target_language,
+            target_dialect=cfg.target_dialect,
+        )
+    except Exception as e:
+        logger.error(f"Translation failed for {blob_name}: {e}")
+        output_manager.log_status(blob_name, "TRANSLATION_FAILED", str(e))
+        return
+
+    # Compute output name (e.g., "file.docx" -> "file_fr.docx")
+    out_name = make_output_name(blob_name, "_fr")
+
+    try:
+        # All writing to blob is done via OutputManager now
+        output_manager.upload_translated_file(out_name, translated_bytes)
+        output_manager.log_status(blob_name, "SUCCESS", f"Output: {out_name}")
+    except Exception as e:
+        logger.error(f"Failed to upload translated file {out_name}: {e}")
+        output_manager.log_status(blob_name, "UPLOAD_FAILED", str(e))
