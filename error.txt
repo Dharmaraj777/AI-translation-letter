@@ -5,41 +5,18 @@ import os
 from io import BytesIO
 from typing import Iterable, List, Dict, Any
 
-from azure.storage.blob import ContainerClient, BlobClient
-from ai_translation_logger import logger
-
 import fitz  # PyMuPDF
 from docx import Document
 from pptx import Presentation
+from azure.storage.blob import BlobClient
 
-
-ALLOWED_EXTENSIONS = {".docx", ".pptx", ".pdf"}
+from ai_translation_logger import logger
+from ai_translation_config_loader import ConfigLoader
 
 
 # -----------------------------
-# Generic helpers (module-level)
+# Shared helpers (used by OaiClient etc.)
 # -----------------------------
-def get_extension(filename: str) -> str:
-    return os.path.splitext(filename)[1].lower()
-
-
-def is_supported_document(filename: str) -> bool:
-    return get_extension(filename) in ALLOWED_EXTENSIONS
-
-
-def list_blobs(container_client: ContainerClient) -> List[str]:
-    blob_names: List[str] = []
-    for blob in container_client.list_blobs():
-        blob_names.append(blob.name)
-    return blob_names
-
-
-def download_blob_to_bytes(blob_client: BlobClient) -> bytes:
-    logger.info(f"Downloading blob: {blob_client.blob_name}")
-    downloader = blob_client.download_blob()
-    return downloader.readall()
-
-
 def chunk_list(items: List[Any], chunk_size: int) -> Iterable[List[Any]]:
     for i in range(0, len(items), chunk_size):
         yield items[i : i + chunk_size]
@@ -53,137 +30,48 @@ def safe_json_loads(text: str) -> Dict:
         raise
 
 
-def replace_extension(filename: str, new_ext: str) -> str:
-    base, _ = os.path.splitext(filename)
-    return base + new_ext
-
-
-def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
-    """
-    Build the translated file name.
-
-    Current rule:
-    - Keep the same extension and append the language suffix to the base name.
-      e.g., "file.docx" -> "file_fr.docx"
-            "brochure.pdf" -> "brochure_fr.pdf"
-    """
-    base, ext = os.path.splitext(input_name)
-    return f"{base}{lang_suffix}{ext}"
-
-
-def find_translator(filename: str, translators) -> Any:
-    """
-    Find the first translator instance that can_handle() this filename.
-    """
-    for t in translators:
-        if t.can_handle(filename):
-            return t
-    return None
-
-
 # -----------------------------
-# Core pipeline logic (as before)
-# -----------------------------
-def process_blob(
-    blob_name: str,
-    cfg: Any,
-    translators,
-    output_manager: Any,
-) -> None:
-    """
-    Orchestrates translation for a single blob:
-      - validates extension
-      - finds proper translator
-      - downloads blob
-      - calls translator
-      - uploads translated file via OutputManager
-      - logs status via OutputManager
-    """
-    if not is_supported_document(blob_name):
-        ext = get_extension(blob_name)
-        logger.info(f"Skipping unsupported file type: {blob_name}")
-        output_manager.log_status(blob_name, "SKIPPED_UNSUPPORTED", f"Extension: {ext}")
-        return
-
-    translator = find_translator(blob_name, translators)
-    if not translator:
-        logger.info(f"No translator found for file: {blob_name}")
-        output_manager.log_status(blob_name, "NO_TRANSLATOR", "")
-        return
-
-    input_container: ContainerClient = cfg.input_container_client
-
-    blob_client: BlobClient = input_container.get_blob_client(blob_name)
-    try:
-        content_bytes = download_blob_to_bytes(blob_client)
-    except Exception as e:
-        logger.error(f"Failed to download blob {blob_name}: {e}")
-        output_manager.log_status(blob_name, "DOWNLOAD_FAILED", str(e))
-        return
-
-    try:
-        translated_bytes = translator.translate_document(
-            blob_name,
-            content_bytes,
-            target_language=cfg.target_language,
-            target_dialect=cfg.target_dialect,
-        )
-    except Exception as e:
-        logger.error(f"Translation failed for {blob_name}: {e}")
-        output_manager.log_status(blob_name, "TRANSLATION_FAILED", str(e))
-        return
-
-    # Compute output name (e.g., "file.docx" -> "file_fr.docx")
-    out_name = make_output_name(blob_name, "_fr")
-
-    try:
-        # All writing to blob is done via OutputManager now
-        output_manager.upload_translated_file(out_name, translated_bytes)
-        output_manager.log_status(blob_name, "SUCCESS", f"Output: {out_name}")
-    except Exception as e:
-        logger.error(f"Failed to upload translated file {out_name}: {e}")
-        output_manager.log_status(blob_name, "UPLOAD_FAILED", str(e))
-
-
-# -----------------------------
-# UtilityFunctions object (Spanish-style)
+# UtilityFunctions (Spanish-style)
 # -----------------------------
 class UtilityFunctions:
     """
-    Spanish-style utility class for:
-      - listing files to process
-      - estimating pages/slides
-      - delegating to process_blob
+    Utility helper for:
+      - listing files to process from input container
+      - approximate page/slide counts for logging
+      - downloading blob content as bytes
+      - (optionally) uploading logs later if you want
     """
 
-    def __init__(self, cfg: Any):
-        """
-        cfg: ConfigLoader instance with at least:
-             - input_container_client
-        """
-        self.cfg = cfg
-        self.input_container_client: ContainerClient = cfg.input_container_client
+    def __init__(self):
+        cfg = ConfigLoader.get_instance()
+        # Use the container client that ConfigLoader already exposes
+        self.input_container_client = cfg.input_container_client
+        # If you later want to upload logs from here:
+        self.logs_container_client = getattr(cfg, "logs_container_client", None)
 
-    # --- file discovery ---
+    # ----- Files to process -----
     def get_files_to_process(self) -> List[str]:
         """
-        Return the list of blob names to process from the input container.
-        (Currently: all blobs. If you want 'today only', we can add that filter.)
+        Return all blobs in the input container.
+        If you want 'today only', you can filter with blob.last_modified.date().
         """
-        return list_blobs(self.input_container_client)
+        blob_names: List[str] = []
+        for blob in self.input_container_client.list_blobs():
+            blob_names.append(blob.name)
+        return blob_names
 
-    # --- page/slide count (for logging) ---
+    # ----- Page / slide count (for logging only) -----
     def get_page_count_from_blob(self, blob_name: str) -> int:
         """
         Reads a blob from the input container and returns an approximate
-        number of pages/slides, depending on its type:
+        page/slide count depending on its type:
 
-        - PDF: true page count via PyMuPDF.
-        - PPTX: slide count via python-pptx.
-        - DOCX: approximated page count based on paragraph count.
+        - PDF: true page count via PyMuPDF
+        - PPTX: slide count via python-pptx
+        - DOCX: approximated by paragraph count (layout-dependent)
         """
-        blob_client = self.input_container_client.get_blob_client(blob_name)
-        file_data = download_blob_to_bytes(blob_client)
+        blob_client: BlobClient = self.input_container_client.get_blob_client(blob_name)
+        file_data = blob_client.download_blob().readall()
 
         _, ext = os.path.splitext(blob_name)
         ext = ext.lower()
@@ -206,9 +94,28 @@ class UtilityFunctions:
         else:
             raise ValueError(f"Unsupported file type for page count: {ext}")
 
-    # --- delegate to core pipeline ---
-    def process_file(self, blob_name: str, translators, output_manager: Any) -> None:
+    # ----- Download content -----
+    def download_blob_bytes(self, blob_name: str) -> bytes:
         """
-        Wrapper around process_blob using the stored cfg.
+        Download a blob from the input container and return its bytes.
         """
-        process_blob(blob_name, self.cfg, translators, output_manager)
+        blob_client: BlobClient = self.input_container_client.get_blob_client(blob_name)
+        logger.info(f"Downloading blob: {blob_name}")
+        return blob_client.download_blob().readall()
+
+    # ----- Optional: upload logs if you want from here -----
+    def upload_log_to_blob(self, blob_name: str, log_data: str) -> None:
+        """
+        Only use this if you want Utils to push the aggregated log file
+        (otherwise keep log uploading in a separate component).
+        """
+        if not self.logs_container_client:
+            logger.warning("logs_container_client not configured; cannot upload log blob.")
+            return
+
+        try:
+            blob_client = self.logs_container_client.get_blob_client(blob_name)
+            blob_client.upload_blob(log_data.encode("utf-8"), overwrite=True)
+            logger.info(f"Log file {blob_name} uploaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to upload log file {blob_name}: {str(e)}")
