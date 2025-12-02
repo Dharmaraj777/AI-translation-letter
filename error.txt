@@ -14,33 +14,10 @@ from ai_translation_logger import logger
 from ai_translation_config_loader import ConfigLoader
 
 
-# -----------------------------
-# Shared helpers (used by OaiClient etc.)
-# -----------------------------
-def chunk_list(items: List[Any], chunk_size: int) -> Iterable[List[Any]]:
-    for i in range(0, len(items), chunk_size):
-        yield items[i : i + chunk_size]
 
-
-def safe_json_loads(text: str) -> Dict:
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from model output: {e}")
-        raise
-
-
-# -----------------------------
-# UtilityFunctions (Spanish-style)
+# UtilityFunctions 
 # -----------------------------
 class UtilityFunctions:
-    """
-    Utility helper for:
-      - listing files to process from input container
-      - approximate page/slide counts for logging
-      - downloading blob content as bytes
-      - (optionally) uploading logs later if you want
-    """
 
     def __init__(self):
         cfg = ConfigLoader.get_instance()
@@ -48,6 +25,19 @@ class UtilityFunctions:
         self.input_container_client = cfg.input_container_client
         # If you later want to upload logs from here:
         self.logs_container_client = getattr(cfg, "logs_container_client", None)
+
+    # Shared helpers (used by OaiClient etc.)
+    def chunk_list(items: List[Any], chunk_size: int) -> Iterable[List[Any]]:
+        for i in range(0, len(items), chunk_size):
+            yield items[i : i + chunk_size]
+
+
+    def safe_json_loads(text: str) -> Dict:
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from model output: {e}")
+            raise
 
     # ----- Files to process -----
     def get_files_to_process(self) -> List[str]:
@@ -62,14 +52,6 @@ class UtilityFunctions:
 
     # ----- Page / slide count (for logging only) -----
     def get_page_count_from_blob(self, blob_name: str) -> int:
-        """
-        Reads a blob from the input container and returns an approximate
-        page/slide count depending on its type:
-
-        - PDF: true page count via PyMuPDF
-        - PPTX: slide count via python-pptx
-        - DOCX: approximated by paragraph count (layout-dependent)
-        """
         blob_client: BlobClient = self.input_container_client.get_blob_client(blob_name)
         file_data = blob_client.download_blob().readall()
 
@@ -96,19 +78,12 @@ class UtilityFunctions:
 
     # ----- Download content -----
     def download_blob_bytes(self, blob_name: str) -> bytes:
-        """
-        Download a blob from the input container and return its bytes.
-        """
         blob_client: BlobClient = self.input_container_client.get_blob_client(blob_name)
         logger.info(f"Downloading blob: {blob_name}")
         return blob_client.download_blob().readall()
 
     # ----- Optional: upload logs if you want from here -----
     def upload_log_to_blob(self, blob_name: str, log_data: str) -> None:
-        """
-        Only use this if you want Utils to push the aggregated log file
-        (otherwise keep log uploading in a separate component).
-        """
         if not self.logs_container_client:
             logger.warning("logs_container_client not configured; cannot upload log blob.")
             return
