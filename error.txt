@@ -1,17 +1,214 @@
----------------------------------------------------------------------------
-ImportError                               Traceback (most recent call last)
-Cell In[1], line 7
-      5 from ai_translation_logger import logger
-      6 from ai_translation_output_manager import OutputManager
-----> 7 from ai_translation_oai_client import OaiClient
-      8 from translators import get_translators
-      9 from ai_translation_utils import list_blobs, process_blob
+# ai_translation_utils.py
 
-File c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-letter-translation\ai_translation_oai_client.py:9
-      7 from ai_translation_config_loader import ConfigLoader
-      8 from ai_translation_logger import logger
-----> 9 from ai_translation_utils import UtilityFunctions
-     12 class OaiClient:
-     13     def __init__(self):
+import json
+import os
+from io import BytesIO
+from typing import Iterable, List, Dict, Any
 
-ImportError: cannot import name 'UtilityFunctions' from 'ai_translation_utils' (c:\Users\HUSPTSO\OneDrive - Blue Cross and Blue Shield of Rhode Island\Desktop\AI-letter-translation\ai_translation_utils.py)
+from azure.storage.blob import ContainerClient, BlobClient
+from ai_translation_logger import logger
+
+import fitz  # PyMuPDF
+from docx import Document
+from pptx import Presentation
+
+
+ALLOWED_EXTENSIONS = {".docx", ".pptx", ".pdf"}
+
+
+# -----------------------------
+# Generic helpers (module-level)
+# -----------------------------
+def get_extension(filename: str) -> str:
+    return os.path.splitext(filename)[1].lower()
+
+
+def is_supported_document(filename: str) -> bool:
+    return get_extension(filename) in ALLOWED_EXTENSIONS
+
+
+def list_blobs(container_client: ContainerClient) -> List[str]:
+    blob_names: List[str] = []
+    for blob in container_client.list_blobs():
+        blob_names.append(blob.name)
+    return blob_names
+
+
+def download_blob_to_bytes(blob_client: BlobClient) -> bytes:
+    logger.info(f"Downloading blob: {blob_client.blob_name}")
+    downloader = blob_client.download_blob()
+    return downloader.readall()
+
+
+def chunk_list(items: List[Any], chunk_size: int) -> Iterable[List[Any]]:
+    for i in range(0, len(items), chunk_size):
+        yield items[i : i + chunk_size]
+
+
+def safe_json_loads(text: str) -> Dict:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON from model output: {e}")
+        raise
+
+
+def replace_extension(filename: str, new_ext: str) -> str:
+    base, _ = os.path.splitext(filename)
+    return base + new_ext
+
+
+def make_output_name(input_name: str, lang_suffix: str = "_fr") -> str:
+    """
+    Build the translated file name.
+
+    Current rule:
+    - Keep the same extension and append the language suffix to the base name.
+      e.g., "file.docx" -> "file_fr.docx"
+            "brochure.pdf" -> "brochure_fr.pdf"
+    """
+    base, ext = os.path.splitext(input_name)
+    return f"{base}{lang_suffix}{ext}"
+
+
+def find_translator(filename: str, translators) -> Any:
+    """
+    Find the first translator instance that can_handle() this filename.
+    """
+    for t in translators:
+        if t.can_handle(filename):
+            return t
+    return None
+
+
+# -----------------------------
+# Core pipeline logic (as before)
+# -----------------------------
+def process_blob(
+    blob_name: str,
+    cfg: Any,
+    translators,
+    output_manager: Any,
+) -> None:
+    """
+    Orchestrates translation for a single blob:
+      - validates extension
+      - finds proper translator
+      - downloads blob
+      - calls translator
+      - uploads translated file via OutputManager
+      - logs status via OutputManager
+    """
+    if not is_supported_document(blob_name):
+        ext = get_extension(blob_name)
+        logger.info(f"Skipping unsupported file type: {blob_name}")
+        output_manager.log_status(blob_name, "SKIPPED_UNSUPPORTED", f"Extension: {ext}")
+        return
+
+    translator = find_translator(blob_name, translators)
+    if not translator:
+        logger.info(f"No translator found for file: {blob_name}")
+        output_manager.log_status(blob_name, "NO_TRANSLATOR", "")
+        return
+
+    input_container: ContainerClient = cfg.input_container_client
+
+    blob_client: BlobClient = input_container.get_blob_client(blob_name)
+    try:
+        content_bytes = download_blob_to_bytes(blob_client)
+    except Exception as e:
+        logger.error(f"Failed to download blob {blob_name}: {e}")
+        output_manager.log_status(blob_name, "DOWNLOAD_FAILED", str(e))
+        return
+
+    try:
+        translated_bytes = translator.translate_document(
+            blob_name,
+            content_bytes,
+            target_language=cfg.target_language,
+            target_dialect=cfg.target_dialect,
+        )
+    except Exception as e:
+        logger.error(f"Translation failed for {blob_name}: {e}")
+        output_manager.log_status(blob_name, "TRANSLATION_FAILED", str(e))
+        return
+
+    # Compute output name (e.g., "file.docx" -> "file_fr.docx")
+    out_name = make_output_name(blob_name, "_fr")
+
+    try:
+        # All writing to blob is done via OutputManager now
+        output_manager.upload_translated_file(out_name, translated_bytes)
+        output_manager.log_status(blob_name, "SUCCESS", f"Output: {out_name}")
+    except Exception as e:
+        logger.error(f"Failed to upload translated file {out_name}: {e}")
+        output_manager.log_status(blob_name, "UPLOAD_FAILED", str(e))
+
+
+# -----------------------------
+# UtilityFunctions object (Spanish-style)
+# -----------------------------
+class UtilityFunctions:
+    """
+    Spanish-style utility class for:
+      - listing files to process
+      - estimating pages/slides
+      - delegating to process_blob
+    """
+
+    def __init__(self, cfg: Any):
+        """
+        cfg: ConfigLoader instance with at least:
+             - input_container_client
+        """
+        self.cfg = cfg
+        self.input_container_client: ContainerClient = cfg.input_container_client
+
+    # --- file discovery ---
+    def get_files_to_process(self) -> List[str]:
+        """
+        Return the list of blob names to process from the input container.
+        (Currently: all blobs. If you want 'today only', we can add that filter.)
+        """
+        return list_blobs(self.input_container_client)
+
+    # --- page/slide count (for logging) ---
+    def get_page_count_from_blob(self, blob_name: str) -> int:
+        """
+        Reads a blob from the input container and returns an approximate
+        number of pages/slides, depending on its type:
+
+        - PDF: true page count via PyMuPDF.
+        - PPTX: slide count via python-pptx.
+        - DOCX: approximated page count based on paragraph count.
+        """
+        blob_client = self.input_container_client.get_blob_client(blob_name)
+        file_data = download_blob_to_bytes(blob_client)
+
+        _, ext = os.path.splitext(blob_name)
+        ext = ext.lower()
+
+        if ext == ".pdf":
+            with fitz.open(stream=file_data, filetype="pdf") as doc:
+                return len(doc)
+
+        elif ext == ".pptx":
+            prs = Presentation(BytesIO(file_data))
+            return len(prs.slides)
+
+        elif ext == ".docx":
+            document = Document(BytesIO(file_data))
+            para_count = len(document.paragraphs)
+            # crude heuristic: ~40 paragraphs per "page"
+            approx_pages = max(1, para_count // 40 or 1)
+            return approx_pages
+
+        else:
+            raise ValueError(f"Unsupported file type for page count: {ext}")
+
+    # --- delegate to core pipeline ---
+    def process_file(self, blob_name: str, translators, output_manager: Any) -> None:
+        """
+        Wrapper around process_blob using the stored cfg.
+        """
+        process_blob(blob_name, self.cfg, translators, output_manager)
