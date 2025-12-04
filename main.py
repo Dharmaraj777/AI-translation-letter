@@ -1,19 +1,15 @@
-# ai_translation_main.py (or main.py)
-
 from datetime import datetime
 import os
 from typing import List
 
-from ai_translation_config_loader import ConfigLoader
-from ai_translation_logger import logger
-from ai_translation_output_manager import OutputManager
-from ai_translation_oai_client import OaiClient
-from ai_translation_utils import UtilityFunctions
-
-# Translators are now top-level modules, not inside a "translators" package
-from docx_translator import DocxTranslator
-from pptx_translator import PptxTranslator
-from pdf_translator import PdfTranslator
+from spanish_translator_config_loader import ConfigLoader
+from spanish_translator_logger import logger, log_stream
+from spanish_translator_output_manager import OutputManager
+from spanish_translator_oai_client import OaiClient
+from spanish_translator_utils import UtilityFunctions
+from docx_processor import DocxProcessor
+from pptx_processor import PptxProcessor
+# from pdf_translator import PdfTranslator
 
 
 def main():
@@ -31,9 +27,9 @@ def main():
     )
 
     # Instantiate per-type translators (they do NOT detect extensions)
-    docx_translator = DocxTranslator(oai_client)
-    pptx_translator = PptxTranslator(oai_client)
-    pdf_translator = PdfTranslator(oai_client)
+    docx_translator = DocxProcessor(oai_client)
+    pptx_translator = PptxProcessor(oai_client)
+    # pdf_translator = PdfTranslator(oai_client)
 
     logger.info("Starting document translation pipeline.")
 
@@ -62,15 +58,16 @@ def main():
                 content_bytes = utils.download_blob_bytes(file)
 
                 # Decide which translator to use in MAIN (not inside translators)
-                if extension == ".pdf":
-                    translated_bytes = pdf_translator.translate_document(
-                        file,
-                        content_bytes,
-                        target_language=cfg.target_language,
-                        target_dialect=cfg.target_dialect,
-                    )
+                # if extension == ".pdf":
+                #     translated_bytes = pdf_translator.translate_document(
+                #         file,
+                #         content_bytes,
+                #         target_language=cfg.target_language,
+                #         target_dialect=cfg.target_dialect,
+                #     )
 
-                elif extension == ".pptx":
+                if extension == ".pptx":
+                    print(f"Processing a **PPTX** file: **{file}**")
                     translated_bytes = pptx_translator.translate_document(
                         file,
                         content_bytes,
@@ -79,6 +76,7 @@ def main():
                     )
 
                 elif extension == ".docx":
+                    print(f"Processing a **DOCX** file: **{file}**")
                     translated_bytes = docx_translator.translate_document(
                         file,
                         content_bytes,
@@ -113,8 +111,6 @@ def main():
 
     logger.info("************* END of Processing File ******************")
 
-    # If you later want to upload logs blob:
-    # from ai_translation_logger import log_stream
     # utils.upload_log_to_blob(log_file_name, cfg, log_stream.getvalue())
 
 
