@@ -12,15 +12,12 @@ from spanish_translator_logger import logger
 from spanish_translator_config_loader import ConfigLoader
 
 
-
-# UtilityFunctions 
-# -----------------------------
 class UtilityFunctions:
-
     def __init__(self):
         cfg = ConfigLoader.get_instance()
-        # Use the container client that ConfigLoader already exposes
+        # Use the container clients that ConfigLoader already exposes
         self.input_container_client = cfg.input_container_client
+        self.output_container_client = getattr(cfg, "output_container_client", None)
         # If you later want to upload logs from here:
         self.logs_container_client = getattr(cfg, "logs_container_client", None)
 
@@ -33,6 +30,42 @@ class UtilityFunctions:
         for blob in self.input_container_client.list_blobs():
             blob_names.append(blob.name)
         return blob_names
+
+    def get_translated_blob_name(self, src_blob_name: str, suffix: str = "_fr") -> str:
+        """
+        Given an input blob name, return the translated output blob name.
+        Matches the naming logic used in main: base + suffix + ext.
+        """
+        base, ext = os.path.splitext(src_blob_name)
+        return f"{base}{suffix}{ext}"
+
+    def translated_output_exists(self, src_blob_name: str, suffix: str = "_fr") -> bool:
+        """
+        Check if the translated file for src_blob_name already exists
+        in the output container. If output_container is not configured,
+        we assume 'does not exist' and process normally.
+        """
+        if not self.output_container_client:
+            # No output container configured => don't skip anything
+            return False
+
+        out_name = self.get_translated_blob_name(src_blob_name, suffix=suffix)
+        blob_client: BlobClient = self.output_container_client.get_blob_client(out_name)
+
+        try:
+            exists = blob_client.exists()
+        except Exception as e:
+            logger.warning(
+                f"Could not check existence of translated blob {out_name} "
+                f"for {src_blob_name}: {e}"
+            )
+            return False
+
+        if exists:
+            logger.info(
+                f"Translated output already exists for {src_blob_name}: {out_name}. Skipping."
+            )
+        return exists
 
     def get_page_count_from_blob(self, blob_name: str) -> int:
         blob_client: BlobClient = self.input_container_client.get_blob_client(blob_name)
