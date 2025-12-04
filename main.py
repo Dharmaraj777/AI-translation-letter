@@ -44,6 +44,15 @@ def main():
 
         for file in file_list:
             try:
+                # Skip if translated output already exists
+                if utils.translated_output_exists(file, suffix="_fr"):
+                    output_manager.log_status(
+                        file,
+                        "SKIPPED_ALREADY_TRANSLATED",
+                        "Translated output already present in output container.",
+                    )
+                    continue
+
                 # Page/slide count is just for logging
                 try:
                     file_len = utils.get_page_count_from_blob(file)
@@ -91,9 +100,8 @@ def main():
                     output_manager.log_status(file, "SKIPPED_UNSUPPORTED", f"Extension: {extension}")
                     continue
 
-                # Build output name: file -> file_fr.ext
-                base, ext_only = os.path.splitext(file)
-                out_name = f"{base}_fr{ext_only}"
+                # Build output name consistently with utils
+                out_name = utils.get_translated_blob_name(file, suffix="_fr")
 
                 # Save translated file via OutputManager
                 output_manager.upload_translated_file(out_name, translated_bytes)
