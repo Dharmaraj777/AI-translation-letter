@@ -12,11 +12,11 @@ class PdfProcessor:
     PDF translator.
 
     Strategy:
-    - Use PyMuPDF to extract text spans with position, size, and color.
+    - Use PyMuPDF to extract text spans with position + size.
     - Send spans to Azure OpenAI via translate_segments (like DOCX/PPTX).
     - Build a NEW PDF:
         * Insert the original page as a rasterized background image.
-        * Overlay translated text at the same bounding boxes.
+        * Overlay translated text at the same bounding boxes (visible, debug-marked).
     """
 
     def __init__(self, oai_client: OaiClient, raster_dpi: int = 150):
@@ -39,8 +39,6 @@ class PdfProcessor:
                 "page": page_idx,
                 "bbox": (x0, y0, x1, y1),
                 "size": font_size,
-                "font": font_name,
-                "color": color_int (0xRRGGBB),
             }
         """
         segments: List[Dict[str, str]] = []
@@ -66,8 +64,6 @@ class PdfProcessor:
                             "page": page_idx,
                             "bbox": span.get("bbox"),
                             "size": span.get("size", 10),
-                            "font": span.get("font", "helv"),
-                            "color": span.get("color", 0),  # 0xRRGGBB
                         }
 
         logger.info(f"[pdf] Collected {len(segments)} text spans from PDF.")
@@ -103,19 +99,40 @@ class PdfProcessor:
 
             # 1) Background = original page rendered as image
             try:
-                pix = orig_page.get_pixmap(dpi=self.raster_dpi)
+                # use scaling matrix so background aligns with page rect
+                zoom = self.raster_dpi / 72.0
+                mat = fitz.Matrix(zoom, zoom)
+                pix = orig_page.get_pixmap(matrix=mat)
                 new_page.insert_image(new_page.rect, pixmap=pix)
             except Exception as e:
                 logger.error(f"[pdf] Failed to rasterize page {page_idx}: {e}")
+
+            # 1b) Put a big debug header on the first page so we KNOW this is our output
+            if page_idx == 0:
+                header_rect = fitz.Rect(rect.x0 + 20, rect.y0 + 20, rect.x1 - 20, rect.y0 + 80)
+                try:
+                    new_page.insert_textbox(
+                        header_rect,
+                        "=== TRANSLATED TO SPANISH (DEBUG) ===",
+                        fontsize=18,
+                        fontname="helv",
+                        color=(1, 0, 0),  # bright red
+                        align=1,  # center
+                    )
+                except Exception as e:
+                    logger.error(f"[pdf] Failed to insert debug header: {e}")
 
             # 2) Overlay translated text spans
             for seg_id, meta in span_meta.items():
                 if meta["page"] != page_idx:
                     continue
 
-                text = id_to_translation.get(seg_id)
-                if not text or not text.strip():
+                translated = id_to_translation.get(seg_id)
+                if not translated or not translated.strip():
                     continue
+
+                # DEBUG: prefix with [SP] so it's clearly different from original
+                text_to_draw = f"[SP] {translated}"
 
                 bbox = meta.get("bbox")
                 if not bbox or len(bbox) != 4:
@@ -127,16 +144,16 @@ class PdfProcessor:
 
                 # Slightly larger than original to make it visible
                 base_size = float(meta.get("size", 10) or 10.0)
-                font_size = max(base_size * 1.1, 6.0)
+                font_size = max(base_size * 1.2, 8.0)
                 font_name = "helv"  # safe built-in font
 
-                # Use a visible dark blue-ish overlay color so you can see it
-                color = (0 / 255.0, 32 / 255.0, 96 / 255.0)  # dark navy
+                # Dark navy overlay color
+                color = (0 / 255.0, 32 / 255.0, 96 / 255.0)
 
                 try:
                     new_page.insert_textbox(
                         rect_span,
-                        text,
+                        text_to_draw,
                         fontsize=font_size,
                         fontname=font_name,
                         color=color,
