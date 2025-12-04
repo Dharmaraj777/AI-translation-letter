@@ -1,5 +1,6 @@
+# pdf_processor.py
 import io
-from typing import List, Dict, Optional, Tuple
+from typing import Optional
 
 import fitz  # PyMuPDF
 
@@ -9,185 +10,103 @@ from spanish_translator_oai_client import OaiClient
 
 class PdfProcessor:
     """
-    PDF translator.
+    PDF translator (vision-based).
 
     Strategy:
-    - Use PyMuPDF to extract text spans with position + size.
-    - Send spans to Azure OpenAI via translate_segments (like DOCX/PPTX).
-    - Build a NEW PDF:
-        * Insert the original page as a rasterized background image.
-        * For each span:
-            - Draw a white patch over the original text area.
-            - Draw the translated text on top of that patch.
+    - For each page:
+        1) Render page to a PNG image.
+        2) Call Azure OpenAI vision via OaiClient.translate_image_to_language(...)
+           to get a FULL Spanish version of the page (ideally in Markdown / rich text).
+        3) Build a NEW PDF:
+            - One blank page per original page.
+            - Draw the translated text in a text box with automatic wrapping.
+
+    This does NOT preserve the original background design, but produces a clean
+    Spanish PDF with the content in order.
     """
 
-    def __init__(self, oai_client: OaiClient, raster_dpi: int = 150):
+    def __init__(self, oai_client: OaiClient, dpi: int = 200):
         self.oai_client = oai_client
-        self.raster_dpi = raster_dpi
+        self.dpi = dpi
 
-    # ---------------------------------------------------------
-    # 1) Collect spans & metadata from the original PDF
-    # ---------------------------------------------------------
-    def _collect_spans(
+    # -----------------------------
+    # Helper: render page to PNG bytes
+    # -----------------------------
+    def _page_to_png_bytes(self, page: fitz.Page) -> bytes:
+        # Render with a zoom based on DPI for better OCR
+        zoom = self.dpi / 72.0
+        mat = fitz.Matrix(zoom, zoom)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        return pix.tobytes("png")
+
+    # -----------------------------
+    # Helper: layout translated text on a new page
+    # -----------------------------
+    def _add_translated_page(
         self,
-        doc: fitz.Document,
-    ) -> Tuple[List[Dict[str, str]], Dict[str, Dict]]:
+        new_doc: fitz.Document,
+        page_rect: fitz.Rect,
+        translated_text: str,
+        page_idx: int,
+    ) -> None:
         """
-        Walk all pages and collect text spans with IDs and styling metadata.
-
-        Returns:
-            segments: list of {"id": seg_id, "text": original_text}
-            span_meta: dict[seg_id] -> {
-                "page": page_idx,
-                "bbox": (x0, y0, x1, y1),
-                "size": font_size,
-            }
+        Create a new page matching the original size and place translated_text
+        inside a margin box using insert_textbox (auto-wrap).
         """
-        segments: List[Dict[str, str]] = []
-        span_meta: Dict[str, Dict] = {}
+        new_page = new_doc.new_page(width=page_rect.width, height=page_rect.height)
 
-        for page_idx, page in enumerate(doc):
-            text_dict = page.get_text("dict")  # blocks -> lines -> spans
-            for b_idx, block in enumerate(text_dict.get("blocks", [])):
-                # type 0 == text, 1 == image, etc.
-                if block.get("type", 0) != 0:
-                    continue
+        # Page margins
+        margin_x = 36  # half inch-ish
+        margin_y = 36
 
-                for l_idx, line in enumerate(block.get("lines", [])):
-                    for s_idx, span in enumerate(line.get("spans", [])):
-                        text = span.get("text", "")
-                        if not text or not text.strip():
-                            continue
+        text_rect = fitz.Rect(
+            page_rect.x0 + margin_x,
+            page_rect.y0 + margin_y,
+            page_rect.x1 - margin_x,
+            page_rect.y1 - margin_y,
+        )
 
-                        seg_id = f"p-{page_idx}-b-{b_idx}-l-{l_idx}-s-{s_idx}"
-
-                        segments.append({"id": seg_id, "text": text})
-                        span_meta[seg_id] = {
-                            "page": page_idx,
-                            "bbox": span.get("bbox"),
-                            "size": span.get("size", 10),
-                        }
-
-        logger.info(f"[pdf] Collected {len(segments)} text spans from PDF.")
-        return segments, span_meta
-
-    # ---------------------------------------------------------
-    # 2) Build new PDF with background + translated text
-    # ---------------------------------------------------------
-    def _build_translated_pdf(
-        self,
-        original_doc: fitz.Document,
-        id_to_translation: Dict[str, str],
-        span_meta: Dict[str, Dict],
-    ) -> bytes:
-        """
-        Create a new PDF:
-        - For each original page:
-            - New page with same size.
-            - Insert rasterized original page as full-page background image.
-            - For each span:
-                - White patch over original text area.
-                - Draw translated text on top.
-        """
-        new_doc = fitz.open()
-
-        num_pages = len(original_doc)
-        logger.info(f"[pdf] Rebuilding translated PDF with {num_pages} pages.")
-
-        for page_idx in range(num_pages):
-            orig_page = original_doc[page_idx]
-            rect = orig_page.rect
-
-            # New page, same size
-            new_page = new_doc.new_page(width=rect.width, height=rect.height)
-
-            # 1) Background = original page rendered as image (no scaling tricks)
+        # Optional: small header at top to show this is translated output
+        if page_idx == 0:
+            header_rect = fitz.Rect(
+                page_rect.x0 + margin_x,
+                page_rect.y0 + margin_y,
+                page_rect.x1 - margin_x,
+                page_rect.y0 + margin_y + 30,
+            )
             try:
-                pix = orig_page.get_pixmap(alpha=False)
-                new_page.insert_image(new_page.rect, pixmap=pix)
-            except Exception as e:
-                logger.error(f"[pdf] Failed to rasterize page {page_idx}: {e}")
-
-            # 1b) Debug header on first page so we know this is translated output
-            if page_idx == 0:
-                header_rect = fitz.Rect(rect.x0 + 20, rect.y0 + 20, rect.x1 - 20, rect.y0 + 80)
-                try:
-                    new_page.insert_textbox(
-                        header_rect,
-                        "=== TRANSLATED TO SPANISH (DEBUG) ===",
-                        fontsize=18,
-                        fontname="helv",
-                        color=(1, 0, 0),  # bright red
-                        align=1,  # center
-                    )
-                except Exception as e:
-                    logger.error(f"[pdf] Failed to insert debug header: {e}")
-
-            # 2) Overlay translated text spans
-            for seg_id, meta in span_meta.items():
-                if meta["page"] != page_idx:
-                    continue
-
-                translated = id_to_translation.get(seg_id)
-                if not translated or not translated.strip():
-                    continue
-
-                bbox = meta.get("bbox")
-                if not bbox or len(bbox) != 4:
-                    continue
-
-                rect_span = fitz.Rect(bbox)
-                if rect_span.is_empty or rect_span.width <= 0 or rect_span.height <= 0:
-                    continue
-
-                # Slightly expand the rect so the white patch fully covers original text
-                pad_x = max(rect_span.width * 0.05, 1.0)
-                pad_y = max(rect_span.height * 0.3, 1.0)
-                patch_rect = fitz.Rect(
-                    rect_span.x0 - pad_x,
-                    rect_span.y0 - pad_y,
-                    rect_span.x1 + pad_x,
-                    rect_span.y1 + pad_y,
+                new_page.insert_textbox(
+                    header_rect,
+                    "=== TRANSLATED PDF (SPANISH) ===",
+                    fontsize=12,
+                    fontname="helv",
+                    color=(0, 0, 0),
+                    align=1,  # center
                 )
+                # Shift main text down a bit
+                text_rect.y0 += 30
+            except Exception as e:
+                logger.error(f"[pdf] Failed to insert header on page 1: {e}")
 
-                # Font size: similar or a bit larger than original
-                base_size = float(meta.get("size", 10) or 10.0)
-                font_size = max(base_size * 1.0, 8.0)
-                font_name = "helv"  # safe built-in font
+        if not translated_text:
+            return
 
-                try:
-                    # 2a) White patch to hide English text in the background image
-                    new_page.draw_rect(
-                        patch_rect,
-                        color=(1, 1, 1),   # white border (or omit)
-                        fill=(1, 1, 1),    # white fill
-                    )
+        try:
+            # Draw the whole page text. PyMuPDF will wrap within the box.
+            new_page.insert_textbox(
+                text_rect,
+                translated_text,
+                fontsize=11,
+                fontname="helv",
+                color=(0, 0, 0),
+                align=0,  # left
+            )
+        except Exception as e:
+            logger.error(f"[pdf] Failed to insert translated text on page {page_idx + 1}: {e}")
 
-                    # 2b) Draw Spanish text on top of patch
-                    new_page.insert_textbox(
-                        patch_rect,
-                        translated,
-                        fontsize=font_size,
-                        fontname=font_name,
-                        color=(0, 0, 0),  # black text
-                        align=0,  # left align
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"[pdf] Failed to overlay translation for {seg_id}: {e}. Skipping this span."
-                    )
-                    continue
-
-        # Serialize new PDF to bytes
-        buf = io.BytesIO()
-        new_doc.save(buf)
-        new_doc.close()
-        buf.seek(0)
-        return buf.read()
-
-    # ---------------------------------------------------------
-    # 3) Public entrypoint (matches DOCX/PPTX pattern)
-    # ---------------------------------------------------------
+    # -----------------------------
+    # Public entrypoint
+    # -----------------------------
     def translate_document(
         self,
         filename: str,
@@ -195,49 +114,78 @@ class PdfProcessor:
         target_language: Optional[str] = None,
         target_dialect: Optional[str] = None,
     ) -> bytes:
-        logger.info(
-            f"Translating PDF document (overlay on original background): {filename}"
-        )
+        logger.info(f"Translating PDF via vision (page-by-page): {filename}")
 
-        doc = fitz.open(stream=content_bytes, filetype="pdf")
+        # Open original PDF from bytes
+        src_doc = fitz.open(stream=content_bytes, filetype="pdf")
 
-        # Collect spans
-        segments, span_meta = self._collect_spans(doc)
-        if not segments:
-            logger.info("[pdf] No text spans found; returning original PDF unchanged.")
-            out = content_bytes
-            doc.close()
-            return out
+        # New PDF that will hold only Spanish text
+        out_doc = fitz.open()
 
-        # For debug: original text map
-        orig_by_id = {seg["id"]: seg["text"] for seg in segments}
-
-        # Translate via Azure OpenAI (same API as DOCX/PPTX)
-        id_to_translation = self.oai_client.translate_segments(
-            segments,
-            target_language=target_language,
-            target_dialect=target_dialect,
-        )
-
-        # Log a few sample translations to prove it's doing something
         try:
-            sample_ids = list(id_to_translation.keys())[:5]
-            for sid in sample_ids:
-                logger.info(
-                    f"[pdf sample] {sid}: "
-                    f"{orig_by_id.get(sid, '')!r} -> {id_to_translation.get(sid, '')!r}"
+            num_pages = len(src_doc)
+            logger.info(f"[pdf-vision] PDF has {num_pages} pages.")
+
+            for page_idx in range(num_pages):
+                page = src_doc[page_idx]
+                logger.info(f"[pdf-vision] Processing page {page_idx + 1}/{num_pages}.")
+
+                # 1) Render page to PNG bytes
+                try:
+                    png_bytes = self._page_to_png_bytes(page)
+                except Exception as e:
+                    logger.error(f"[pdf-vision] Failed to render page {page_idx + 1}: {e}")
+                    # Create blank page with note
+                    self._add_translated_page(
+                        out_doc,
+                        page.rect,
+                        f"[Error rendering page {page_idx + 1}]",
+                        page_idx,
+                    )
+                    continue
+
+                # 2) Call vision model to get Spanish page text
+                try:
+                    translated_text = self.oai_client.translate_image_to_language(
+                        png_bytes,
+                        content_type="image/png",
+                        target_language=target_language,
+                        target_dialect=target_dialect,
+                    )
+                    if translated_text is None:
+                        translated_text = ""
+                except Exception as e:
+                    logger.error(
+                        f"[pdf-vision] Vision translation failed for page {page_idx + 1}: {e}"
+                    )
+                    translated_text = ""
+
+                # Log a small sample so we know it's working
+                if translated_text:
+                    logger.info(
+                        f"[pdf-vision sample] page {page_idx + 1}: "
+                        f"{translated_text[:120]!r}"
+                    )
+                else:
+                    logger.warning(
+                        f"[pdf-vision] Empty translation for page {page_idx + 1}, "
+                        f"creating blank page with placeholder."
+                    )
+
+                # 3) Add a new page with this translated text
+                self._add_translated_page(
+                    out_doc,
+                    page.rect,
+                    translated_text,
+                    page_idx,
                 )
-        except Exception:
-            pass
 
-        # Build new PDF with background + translated text
-        try:
-            translated_bytes = self._build_translated_pdf(
-                original_doc=doc,
-                id_to_translation=id_to_translation,
-                span_meta=span_meta,
-            )
+            # Serialize new PDF to bytes
+            buf = io.BytesIO()
+            out_doc.save(buf)
+            buf.seek(0)
+            return buf.read()
+
         finally:
-            doc.close()
-
-        return translated_bytes
+            src_doc.close()
+            out_doc.close()
