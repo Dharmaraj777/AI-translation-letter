@@ -1,46 +1,46 @@
-2025-12-04 07:54:20,985 - INFO - Starting document translation pipeline.
-2025-12-04 07:54:21,794 - INFO - Found the following files to process: ['Employee launch email blast template  BCC WPR.docx', 'IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf', 'The Power of Positivity 3.26.25.pptx'].
-2025-12-04 07:54:21,814 - INFO - Processing file: Employee launch email blast template  BCC WPR.docx...with ~1 pages/slides
-2025-12-04 07:54:21,816 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
+2025-12-04 08:05:11,432 - INFO - Starting document translation pipeline.
+2025-12-04 08:05:12,070 - INFO - Found the following files to process: ['Employee launch email blast template  BCC WPR.docx', 'IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf', 'The Power of Positivity 3.26.25.pptx'].
+2025-12-04 08:05:12,090 - INFO - Processing file: Employee launch email blast template  BCC WPR.docx...with ~1 pages/slides
+2025-12-04 08:05:12,092 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
 Processing a **DOCX** file: **Employee launch email blast template  BCC WPR.docx**
-2025-12-04 07:54:21,826 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
-2025-12-04 07:54:21,838 - INFO - [docx] Collected 84 text segments from DOCX.
-2025-12-04 07:54:21,839 - INFO - Translating 84 segments via Azure OpenAI...
-2025-12-04 07:54:21,840 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
-2025-12-04 07:54:34,650 - INFO - Translation complete.
-2025-12-04 07:54:34,663 - INFO - [image] Found image rel_id=rId10, content_type=image/png
-2025-12-04 07:54:34,716 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
-2025-12-04 07:54:34,735 - INFO - Calling GPT-4.1 vision to translate image text...
-2025-12-04 07:54:36,553 - INFO - [image translation] GPT output (first 120 chars): 'Ejemplo de recompensa\n\n200 puntos      $10  \n500 puntos      $25  \n1,000 puntos    $50  \n2,000 puntos    $100'
-2025-12-04 07:54:36,554 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Ejemplo de recompensa\n\n200 puntos      $10  \n500 puntos      $25  \n1,000 puntos '
-2025-12-04 07:54:36,556 - INFO - [image] No markdown table detected; rendering as wrapped text.
-2025-12-04 07:54:36,560 - INFO - [image] Replaced image (rel_id=rId10) with translated version.
-2025-12-04 07:54:36,562 - INFO - [image] Completed image translation. Found=1, translated=1
-2025-12-04 07:54:36,569 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_fr.docx
-2025-12-04 07:54:36,596 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_fr.docx)
+2025-12-04 08:05:12,103 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
+2025-12-04 08:05:12,163 - INFO - [docx] Collected 84 text segments from DOCX.
+2025-12-04 08:05:12,164 - INFO - Translating 84 segments via Azure OpenAI...
+2025-12-04 08:05:12,166 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
+2025-12-04 08:05:25,541 - INFO - Translation complete.
+2025-12-04 08:05:25,559 - INFO - [image] Found image rel_id=rId10, content_type=image/png
+2025-12-04 08:05:25,674 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
+2025-12-04 08:05:25,695 - INFO - Calling GPT-4.1 vision to translate image text...
+2025-12-04 08:05:27,019 - INFO - [image translation] GPT output (first 120 chars): 'Ejemplo de recompensa\n\n200 puntos      $10\n500 puntos      $25\n1,000 puntos    $50\n2,000 puntos    $100'
+2025-12-04 08:05:27,021 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Ejemplo de recompensa\n\n200 puntos      $10\n500 puntos      $25\n1,000 puntos    $'
+2025-12-04 08:05:27,025 - INFO - [image] No markdown table detected; rendering as wrapped text.
+2025-12-04 08:05:27,029 - INFO - [image] Replaced image (rel_id=rId10) with translated version.
+2025-12-04 08:05:27,030 - INFO - [image] Completed image translation. Found=1, translated=1
+2025-12-04 08:05:27,044 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_sp.docx
+2025-12-04 08:05:27,058 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_sp.docx)
 
 ______________________________________
-2025-12-04 07:54:36,664 - INFO - Processing file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf...with ~4 pages/slides
-2025-12-04 07:54:36,666 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-04 07:54:36,687 - INFO - Translating PDF document (overlay on original background): IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-04 07:54:36,780 - INFO - [pdf] Collected 126 text spans from PDF.
-2025-12-04 07:54:36,781 - INFO - Translating 126 segments via Azure OpenAI...
-2025-12-04 07:54:36,783 - INFO - Translating batch of 100 segments: p-0-b-2-l-0-s-0 ... p-2-b-17-l-0-s-0
-2025-12-04 07:54:55,774 - INFO - Translating batch of 26 segments: p-2-b-17-l-1-s-0 ... p-3-b-4-l-0-s-0
-2025-12-04 07:55:00,857 - INFO - Translation complete.
-2025-12-04 07:55:00,859 - INFO - [pdf] Rebuilding translated PDF with 4 pages.
-2025-12-04 07:55:01,113 - ERROR - Error processing file IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf: need font file or buffer
-2025-12-04 07:55:01,114 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> TRANSLATION_FAILED (need font file or buffer)
-2025-12-04 07:55:01,251 - INFO - Processing file: The Power of Positivity 3.26.25.pptx...with ~1 pages/slides
-2025-12-04 07:55:01,253 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
+2025-12-04 08:05:27,191 - INFO - Processing file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf...with ~4 pages/slides
+2025-12-04 08:05:27,193 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
+2025-12-04 08:05:27,220 - INFO - Translating PDF document (overlay on original background): IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
+2025-12-04 08:05:27,314 - INFO - [pdf] Collected 126 text spans from PDF.
+2025-12-04 08:05:27,315 - INFO - Translating 126 segments via Azure OpenAI...
+2025-12-04 08:05:27,316 - INFO - Translating batch of 100 segments: p-0-b-2-l-0-s-0 ... p-2-b-17-l-0-s-0
+2025-12-04 08:05:46,104 - INFO - Translating batch of 26 segments: p-2-b-17-l-1-s-0 ... p-3-b-4-l-0-s-0
+2025-12-04 08:05:52,578 - INFO - Translation complete.
+2025-12-04 08:05:52,580 - INFO - [pdf] Rebuilding translated PDF with 4 pages.
+2025-12-04 08:05:53,050 - ERROR - This application is not able to process file with extension type: .pdf at this time.
+2025-12-04 08:05:53,052 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> SKIPPED_UNSUPPORTED (Extension: .pdf)
+2025-12-04 08:05:53,126 - INFO - Processing file: The Power of Positivity 3.26.25.pptx...with ~1 pages/slides
+2025-12-04 08:05:53,128 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
 Processing a **PPTX** file: **The Power of Positivity 3.26.25.pptx**
-2025-12-04 07:55:01,276 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
-2025-12-04 07:55:01,287 - INFO - [pptx] Collected 9 text segments from PPTX.
-2025-12-04 07:55:01,288 - INFO - Translating 9 segments via Azure OpenAI...
-2025-12-04 07:55:01,289 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
-2025-12-04 07:55:04,039 - INFO - Translation complete.
-2025-12-04 07:55:04,106 - INFO - Uploading translated file: The Power of Positivity 3.26.25_fr.pptx
-2025-12-04 07:55:04,217 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_fr.pptx)
+2025-12-04 08:05:53,154 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
+2025-12-04 08:05:53,166 - INFO - [pptx] Collected 9 text segments from PPTX.
+2025-12-04 08:05:53,167 - INFO - Translating 9 segments via Azure OpenAI...
+2025-12-04 08:05:53,168 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
+2025-12-04 08:05:55,618 - INFO - Translation complete.
+2025-12-04 08:05:55,673 - INFO - Uploading translated file: The Power of Positivity 3.26.25_sp.pptx
+2025-12-04 08:05:55,733 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_sp.pptx)
 
 ______________________________________
-2025-12-04 07:55:04,238 - INFO - ************* END of Processing File ******************
+2025-12-04 08:05:55,753 - INFO - ************* END of Processing File ******************
