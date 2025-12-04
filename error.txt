@@ -1,56 +1,243 @@
-2025-12-04 09:32:57,751 - INFO - Starting document translation pipeline.
-2025-12-04 09:32:58,355 - INFO - Found the following files to process: ['Employee launch email blast template  BCC WPR.docx', 'IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf', 'The Power of Positivity 3.26.25.pptx'].
-2025-12-04 09:32:58,374 - INFO - Processing file: Employee launch email blast template  BCC WPR.docx...with ~1 pages/slides
-2025-12-04 09:32:58,374 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
-Processing a **DOCX** file: **Employee launch email blast template  BCC WPR.docx**
-2025-12-04 09:32:58,389 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
-2025-12-04 09:32:58,446 - INFO - [docx] Collected 84 text segments from DOCX.
-2025-12-04 09:32:58,446 - INFO - Translating 84 segments via Azure OpenAI...
-2025-12-04 09:32:58,446 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
-2025-12-04 09:33:14,083 - INFO - Translation complete.
-2025-12-04 09:33:14,092 - INFO - [image] Found image rel_id=rId10, content_type=image/png
-2025-12-04 09:33:14,186 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
-2025-12-04 09:33:14,205 - INFO - Calling GPT-4.1 vision to translate image text...
-2025-12-04 09:33:15,764 - INFO - [image translation] GPT output (first 120 chars): 'Ejemplo de recompensa\n\n200 puntos      $10\n500 puntos      $25\n1,000 puntos    $50\n2,000 puntos    $100'
-2025-12-04 09:33:15,765 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Ejemplo de recompensa\n\n200 puntos      $10\n500 puntos      $25\n1,000 puntos    $'
-2025-12-04 09:33:15,767 - INFO - [image] No markdown table detected; rendering as wrapped text.
-2025-12-04 09:33:15,771 - INFO - [image] Replaced image (rel_id=rId10) with translated version.
-2025-12-04 09:33:15,772 - INFO - [image] Completed image translation. Found=1, translated=1
-2025-12-04 09:33:15,783 - ERROR - Failed to save local copy for Employee launch email blast template  BCC WPR_sp.docx: a bytes-like object is required, not 'str'
-2025-12-04 09:33:15,784 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_sp.docx
-2025-12-04 09:33:15,800 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_sp.docx)
+import io
+from typing import List, Dict, Optional, Tuple
 
-______________________________________
-2025-12-04 09:33:15,860 - INFO - Processing file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf...with ~4 pages/slides
-2025-12-04 09:33:15,872 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-04 09:33:15,896 - INFO - Translating PDF document (overlay on original background): IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-04 09:33:15,992 - INFO - [pdf] Collected 126 text spans from PDF.
-2025-12-04 09:33:15,994 - INFO - Translating 126 segments via Azure OpenAI...
-2025-12-04 09:33:15,994 - INFO - Translating batch of 100 segments: p-0-b-2-l-0-s-0 ... p-2-b-17-l-0-s-0
-2025-12-04 09:33:32,768 - INFO - Translating batch of 26 segments: p-2-b-17-l-1-s-0 ... p-3-b-4-l-0-s-0
-2025-12-04 09:33:39,386 - INFO - Translation complete.
-2025-12-04 09:33:39,387 - INFO - [pdf sample] p-0-b-2-l-0-s-0: 'For use with Wellness Premium ' -> 'Para uso con Wellness Premium'
-2025-12-04 09:33:39,388 - INFO - [pdf sample] p-0-b-2-l-1-s-0: 'Reward for Large Groups' -> 'Recompensa para grupos grandes'
-2025-12-04 09:33:39,389 - INFO - [pdf sample] p-0-b-3-l-0-s-0: 'Your Annual \n' -> 'Tu incentivo anual\n'
-2025-12-04 09:33:39,390 - INFO - [pdf sample] p-0-b-3-l-1-s-0: 'Wellness Incentives' -> 'Incentivos de bienestar'
-2025-12-04 09:33:39,390 - INFO - [pdf sample] p-1-b-0-l-0-s-0: '2' -> '2'
-2025-12-04 09:33:39,392 - INFO - [pdf] Rebuilding translated PDF with 4 pages.
-2025-12-04 09:33:39,838 - ERROR - Failed to save local copy for IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA_sp.pdf: a bytes-like object is required, not 'str'
-2025-12-04 09:33:39,840 - INFO - Uploading translated file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA_sp.pdf
-2025-12-04 09:33:40,311 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> SUCCESS (Output: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA_sp.pdf)
+import fitz  # PyMuPDF
 
-______________________________________
-2025-12-04 09:33:40,420 - INFO - Processing file: The Power of Positivity 3.26.25.pptx...with ~1 pages/slides
-2025-12-04 09:33:40,422 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
-Processing a **PPTX** file: **The Power of Positivity 3.26.25.pptx**
-2025-12-04 09:33:40,446 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
-2025-12-04 09:33:40,458 - INFO - [pptx] Collected 9 text segments from PPTX.
-2025-12-04 09:33:40,459 - INFO - Translating 9 segments via Azure OpenAI...
-2025-12-04 09:33:40,459 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
-2025-12-04 09:33:43,841 - INFO - Translation complete.
-2025-12-04 09:33:43,896 - ERROR - Failed to save local copy for The Power of Positivity 3.26.25_sp.pptx: a bytes-like object is required, not 'str'
-2025-12-04 09:33:43,897 - INFO - Uploading translated file: The Power of Positivity 3.26.25_sp.pptx
-2025-12-04 09:33:43,942 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_sp.pptx)
+from spanish_translator_logger import logger
+from spanish_translator_oai_client import OaiClient
 
-______________________________________
-2025-12-04 09:33:43,967 - INFO - ************* END of Processing File ******************
+
+class PdfProcessor:
+    """
+    PDF translator.
+
+    Strategy:
+    - Use PyMuPDF to extract text spans with position + size.
+    - Send spans to Azure OpenAI via translate_segments (like DOCX/PPTX).
+    - Build a NEW PDF:
+        * Insert the original page as a rasterized background image.
+        * For each span:
+            - Draw a white patch over the original text area.
+            - Draw the translated text on top of that patch.
+    """
+
+    def __init__(self, oai_client: OaiClient, raster_dpi: int = 150):
+        self.oai_client = oai_client
+        self.raster_dpi = raster_dpi
+
+    # ---------------------------------------------------------
+    # 1) Collect spans & metadata from the original PDF
+    # ---------------------------------------------------------
+    def _collect_spans(
+        self,
+        doc: fitz.Document,
+    ) -> Tuple[List[Dict[str, str]], Dict[str, Dict]]:
+        """
+        Walk all pages and collect text spans with IDs and styling metadata.
+
+        Returns:
+            segments: list of {"id": seg_id, "text": original_text}
+            span_meta: dict[seg_id] -> {
+                "page": page_idx,
+                "bbox": (x0, y0, x1, y1),
+                "size": font_size,
+            }
+        """
+        segments: List[Dict[str, str]] = []
+        span_meta: Dict[str, Dict] = {}
+
+        for page_idx, page in enumerate(doc):
+            text_dict = page.get_text("dict")  # blocks -> lines -> spans
+            for b_idx, block in enumerate(text_dict.get("blocks", [])):
+                # type 0 == text, 1 == image, etc.
+                if block.get("type", 0) != 0:
+                    continue
+
+                for l_idx, line in enumerate(block.get("lines", [])):
+                    for s_idx, span in enumerate(line.get("spans", [])):
+                        text = span.get("text", "")
+                        if not text or not text.strip():
+                            continue
+
+                        seg_id = f"p-{page_idx}-b-{b_idx}-l-{l_idx}-s-{s_idx}"
+
+                        segments.append({"id": seg_id, "text": text})
+                        span_meta[seg_id] = {
+                            "page": page_idx,
+                            "bbox": span.get("bbox"),
+                            "size": span.get("size", 10),
+                        }
+
+        logger.info(f"[pdf] Collected {len(segments)} text spans from PDF.")
+        return segments, span_meta
+
+    # ---------------------------------------------------------
+    # 2) Build new PDF with background + translated text
+    # ---------------------------------------------------------
+    def _build_translated_pdf(
+        self,
+        original_doc: fitz.Document,
+        id_to_translation: Dict[str, str],
+        span_meta: Dict[str, Dict],
+    ) -> bytes:
+        """
+        Create a new PDF:
+        - For each original page:
+            - New page with same size.
+            - Insert rasterized original page as full-page background image.
+            - For each span:
+                - White patch over original text area.
+                - Draw translated text on top.
+        """
+        new_doc = fitz.open()
+
+        num_pages = len(original_doc)
+        logger.info(f"[pdf] Rebuilding translated PDF with {num_pages} pages.")
+
+        for page_idx in range(num_pages):
+            orig_page = original_doc[page_idx]
+            rect = orig_page.rect
+
+            # New page, same size
+            new_page = new_doc.new_page(width=rect.width, height=rect.height)
+
+            # 1) Background = original page rendered as image (no scaling tricks)
+            try:
+                pix = orig_page.get_pixmap(alpha=False)
+                new_page.insert_image(new_page.rect, pixmap=pix)
+            except Exception as e:
+                logger.error(f"[pdf] Failed to rasterize page {page_idx}: {e}")
+
+            # 1b) Debug header on first page so we know this is translated output
+            if page_idx == 0:
+                header_rect = fitz.Rect(rect.x0 + 20, rect.y0 + 20, rect.x1 - 20, rect.y0 + 80)
+                try:
+                    new_page.insert_textbox(
+                        header_rect,
+                        "=== TRANSLATED TO SPANISH (DEBUG) ===",
+                        fontsize=18,
+                        fontname="helv",
+                        color=(1, 0, 0),  # bright red
+                        align=1,  # center
+                    )
+                except Exception as e:
+                    logger.error(f"[pdf] Failed to insert debug header: {e}")
+
+            # 2) Overlay translated text spans
+            for seg_id, meta in span_meta.items():
+                if meta["page"] != page_idx:
+                    continue
+
+                translated = id_to_translation.get(seg_id)
+                if not translated or not translated.strip():
+                    continue
+
+                bbox = meta.get("bbox")
+                if not bbox or len(bbox) != 4:
+                    continue
+
+                rect_span = fitz.Rect(bbox)
+                if rect_span.is_empty or rect_span.width <= 0 or rect_span.height <= 0:
+                    continue
+
+                # Slightly expand the rect so the white patch fully covers original text
+                pad_x = max(rect_span.width * 0.05, 1.0)
+                pad_y = max(rect_span.height * 0.3, 1.0)
+                patch_rect = fitz.Rect(
+                    rect_span.x0 - pad_x,
+                    rect_span.y0 - pad_y,
+                    rect_span.x1 + pad_x,
+                    rect_span.y1 + pad_y,
+                )
+
+                # Font size: similar or a bit larger than original
+                base_size = float(meta.get("size", 10) or 10.0)
+                font_size = max(base_size * 1.0, 8.0)
+                font_name = "helv"  # safe built-in font
+
+                try:
+                    # 2a) White patch to hide English text in the background image
+                    new_page.draw_rect(
+                        patch_rect,
+                        color=(1, 1, 1),   # white border (or omit)
+                        fill=(1, 1, 1),    # white fill
+                    )
+
+                    # 2b) Draw Spanish text on top of patch
+                    new_page.insert_textbox(
+                        patch_rect,
+                        translated,
+                        fontsize=font_size,
+                        fontname=font_name,
+                        color=(0, 0, 0),  # black text
+                        align=0,  # left align
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"[pdf] Failed to overlay translation for {seg_id}: {e}. Skipping this span."
+                    )
+                    continue
+
+        # Serialize new PDF to bytes
+        buf = io.BytesIO()
+        new_doc.save(buf)
+        new_doc.close()
+        buf.seek(0)
+        return buf.read()
+
+    # ---------------------------------------------------------
+    # 3) Public entrypoint (matches DOCX/PPTX pattern)
+    # ---------------------------------------------------------
+    def translate_document(
+        self,
+        filename: str,
+        content_bytes: bytes,
+        target_language: Optional[str] = None,
+        target_dialect: Optional[str] = None,
+    ) -> bytes:
+        logger.info(
+            f"Translating PDF document (overlay on original background): {filename}"
+        )
+
+        doc = fitz.open(stream=content_bytes, filetype="pdf")
+
+        # Collect spans
+        segments, span_meta = self._collect_spans(doc)
+        if not segments:
+            logger.info("[pdf] No text spans found; returning original PDF unchanged.")
+            out = content_bytes
+            doc.close()
+            return out
+
+        # For debug: original text map
+        orig_by_id = {seg["id"]: seg["text"] for seg in segments}
+
+        # Translate via Azure OpenAI (same API as DOCX/PPTX)
+        id_to_translation = self.oai_client.translate_segments(
+            segments,
+            target_language=target_language,
+            target_dialect=target_dialect,
+        )
+
+        # Log a few sample translations to prove it's doing something
+        try:
+            sample_ids = list(id_to_translation.keys())[:5]
+            for sid in sample_ids:
+                logger.info(
+                    f"[pdf sample] {sid}: "
+                    f"{orig_by_id.get(sid, '')!r} -> {id_to_translation.get(sid, '')!r}"
+                )
+        except Exception:
+            pass
+
+        # Build new PDF with background + translated text
+        try:
+            translated_bytes = self._build_translated_pdf(
+                original_doc=doc,
+                id_to_translation=id_to_translation,
+                span_meta=span_meta,
+            )
+        finally:
+            doc.close()
+
+        return translated_bytes
