@@ -24,36 +24,13 @@ class PdfProcessor:
         self.raster_dpi = raster_dpi
 
     # ---------------------------------------------------------
-    # Font mapping helper (avoid “need font file or buffer”)
+    # Font mapping helper (force to a safe built-in font)
     # ---------------------------------------------------------
     def _normalize_font_name(self, original: Optional[str]) -> str:
         """
-        Map arbitrary PDF font names (BentonSans*, HelveticaNeue*, etc.)
-        to built-in fonts that PyMuPDF knows.
-
-        Built-in options include:
-        - 'helv', 'helv-bold', 'helv-oblique', 'helv-boldoblique'
-        - 'times-roman', 'times-bold', 'times-italic', 'times-bolditalic'
-        - 'courier', 'courier-bold', 'courier-oblique', 'courier-boldoblique'
+        Map arbitrary PDF font names to a built-in font that PyMuPDF knows.
+        For now we keep it simple and always use 'helv'.
         """
-        if not original:
-            return "helv"
-
-        lower = original.lower()
-
-        # Bold-ish
-        if "bold" in lower or "blk" in lower or "black" in lower:
-            return "helv-bold"
-
-        # Italic/oblique
-        if "italic" in lower or "oblique" in lower:
-            return "helv-oblique"
-
-        # Light / thin -> regular helv
-        if "light" in lower or "thin" in lower:
-            return "helv"
-
-        # Condensed / regular -> just helv
         return "helv"
 
     # ---------------------------------------------------------
@@ -171,15 +148,23 @@ class PdfProcessor:
                 else:
                     color = (0, 0, 0)
 
-                # Insert translated text with transparent background
-                new_page.insert_textbox(
-                    rect_span,
-                    text,
-                    fontsize=font_size,
-                    fontname=font_name,
-                    color=color,
-                    align=0,  # left align
-                )
+                # Insert translated text with transparent background.
+                # Guarded so a single bad span doesn't kill the whole page.
+                try:
+                    new_page.insert_textbox(
+                        rect_span,
+                        text,
+                        fontsize=font_size,
+                        fontname=font_name,
+                        color=color,
+                        align=0,  # left align
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"[pdf] Failed to insert text for {seg_id} "
+                        f"(font='{font_name}'): {e}. Skipping this span."
+                    )
+                    continue
 
         # Serialize new PDF to bytes
         buf = io.BytesIO()
