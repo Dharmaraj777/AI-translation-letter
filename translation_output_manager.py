@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from azure.storage.blob import ContainerClient
-from ai_translation_logger import logger
+from spanish_translator_logger import logger
 
 
 class OutputManager:
@@ -65,15 +65,7 @@ class OutputManager:
     # -----------------------------
     # Upload translated document
     # -----------------------------
-    def upload_translated_file(
-        self,
-        blob_name: str,
-        data: bytes,
-        overwrite: bool = True,
-    ) -> None:
-        """
-        Uploads translated document bytes into the OUTPUT container.
-        """
+    def upload_translated_file(self,  blob_name, data, overwrite = True,):
         logger.info(f"Uploading translated file: {blob_name}")
         self.output_container_client.upload_blob(
             name=blob_name,
