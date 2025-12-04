@@ -1,5 +1,6 @@
 import io
 import csv
+import os
 from datetime import datetime
 from typing import Optional
 
@@ -12,6 +13,7 @@ class OutputManager:
     Manages:
       1) Translation status log in a CSV stored in the logs container.
       2) Upload of translated documents into the output container.
+      3) (Optional) Local copies of translated documents under ./Output.
 
     Status CSV rows:
       timestamp, blob_name, status, details
@@ -65,10 +67,33 @@ class OutputManager:
     # -----------------------------
     # Upload translated document
     # -----------------------------
-    def upload_translated_file(self,  blob_name, data, overwrite = True,):
+    def upload_translated_file(self, blob_name, data, overwrite=True):
         logger.info(f"Uploading translated file: {blob_name}")
         self.output_container_client.upload_blob(
             name=blob_name,
             data=data,
             overwrite=overwrite,
         )
+
+    # -----------------------------
+    # Save local copy to ./Output
+    # -----------------------------
+    def save_local_copy(self, blob_name: str, data: bytes, output_dir: str = "Output") -> str:
+        """
+        Save a local copy of the translated file under ./Output (or custom output_dir).
+
+        Returns:
+            The full local path of the saved file.
+        """
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            local_path = os.path.join(output_dir, blob_name)
+
+            with open(local_path, "wb") as f:
+                f.write(data)
+
+            logger.info(f"Saved local copy of translated file: {local_path}")
+            return local_path
+        except Exception as e:
+            logger.error(f"Failed to save local copy for {blob_name}: {e}")
+            return ""
