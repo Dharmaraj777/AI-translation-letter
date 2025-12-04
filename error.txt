@@ -1,4 +1,5 @@
 # pdf_processor.py
+
 import io
 from typing import Optional
 
@@ -10,53 +11,59 @@ from spanish_translator_oai_client import OaiClient
 
 class PdfProcessor:
     """
-    PDF translator (vision-based).
+    PDF translator (vision-based, text-first).
 
     Strategy:
-    - For each page:
-        1) Render page to a PNG image.
+    - For each page in the original PDF:
+        1) Render the page as a PNG image.
         2) Call Azure OpenAI vision via OaiClient.translate_image_to_language(...)
-           to get a FULL Spanish version of the page (ideally in Markdown / rich text).
+           to get a FULL Spanish version of that page's text (ideally with structure).
         3) Build a NEW PDF:
             - One blank page per original page.
-            - Draw the translated text in a text box with automatic wrapping.
+            - Place the translated text in a text box with automatic wrapping.
 
-    This does NOT preserve the original background design, but produces a clean
-    Spanish PDF with the content in order.
+    This does NOT preserve the original brochure design (colors/background),
+    but produces a clean Spanish PDF with content in the correct page order.
     """
 
     def __init__(self, oai_client: OaiClient, dpi: int = 200):
         self.oai_client = oai_client
         self.dpi = dpi
 
-    # -----------------------------
-    # Helper: render page to PNG bytes
-    # -----------------------------
+    # -------------------------------------------------
+    # Helper: render one page to PNG bytes
+    # -------------------------------------------------
     def _page_to_png_bytes(self, page: fitz.Page) -> bytes:
-        # Render with a zoom based on DPI for better OCR
+        """
+        Render a PDF page to PNG bytes at the configured DPI.
+        """
         zoom = self.dpi / 72.0
         mat = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat, alpha=False)
         return pix.tobytes("png")
 
-    # -----------------------------
-    # Helper: layout translated text on a new page
-    # -----------------------------
+    # -------------------------------------------------
+    # Helper: add one translated page to output PDF
+    # -------------------------------------------------
     def _add_translated_page(
         self,
-        new_doc: fitz.Document,
+        out_doc: fitz.Document,
         page_rect: fitz.Rect,
         translated_text: str,
         page_idx: int,
     ) -> None:
         """
-        Create a new page matching the original size and place translated_text
-        inside a margin box using insert_textbox (auto-wrap).
+        Create a new page with the same size as the original and place the
+        translated text inside a margin box using insert_textbox.
         """
-        new_page = new_doc.new_page(width=page_rect.width, height=page_rect.height)
+        new_page = out_doc.new_page(width=page_rect.width, height=page_rect.height)
 
-        # Page margins
-        margin_x = 36  # half inch-ish
+        if not translated_text:
+            # Nothing to render; leave it blank (or add a small note if you want)
+            return
+
+        # Define margins (roughly half an inch)
+        margin_x = 36
         margin_y = 36
 
         text_rect = fitz.Rect(
@@ -66,47 +73,24 @@ class PdfProcessor:
             page_rect.y1 - margin_y,
         )
 
-        # Optional: small header at top to show this is translated output
-        if page_idx == 0:
-            header_rect = fitz.Rect(
-                page_rect.x0 + margin_x,
-                page_rect.y0 + margin_y,
-                page_rect.x1 - margin_x,
-                page_rect.y0 + margin_y + 30,
-            )
-            try:
-                new_page.insert_textbox(
-                    header_rect,
-                    "=== TRANSLATED PDF (SPANISH) ===",
-                    fontsize=12,
-                    fontname="helv",
-                    color=(0, 0, 0),
-                    align=1,  # center
-                )
-                # Shift main text down a bit
-                text_rect.y0 += 30
-            except Exception as e:
-                logger.error(f"[pdf] Failed to insert header on page 1: {e}")
-
-        if not translated_text:
-            return
-
         try:
-            # Draw the whole page text. PyMuPDF will wrap within the box.
+            # Draw the whole page text. PyMuPDF will wrap it within the box.
             new_page.insert_textbox(
                 text_rect,
                 translated_text,
                 fontsize=11,
-                fontname="helv",
+                fontname="helv",  # built-in font
                 color=(0, 0, 0),
-                align=0,  # left
+                align=0,  # left-aligned
             )
         except Exception as e:
-            logger.error(f"[pdf] Failed to insert translated text on page {page_idx + 1}: {e}")
+            logger.error(
+                f"[pdf-vision] Failed to insert translated text on page {page_idx + 1}: {e}"
+            )
 
-    # -----------------------------
+    # -------------------------------------------------
     # Public entrypoint
-    # -----------------------------
+    # -------------------------------------------------
     def translate_document(
         self,
         filename: str,
@@ -116,10 +100,7 @@ class PdfProcessor:
     ) -> bytes:
         logger.info(f"Translating PDF via vision (page-by-page): {filename}")
 
-        # Open original PDF from bytes
         src_doc = fitz.open(stream=content_bytes, filetype="pdf")
-
-        # New PDF that will hold only Spanish text
         out_doc = fitz.open()
 
         try:
@@ -130,21 +111,21 @@ class PdfProcessor:
                 page = src_doc[page_idx]
                 logger.info(f"[pdf-vision] Processing page {page_idx + 1}/{num_pages}.")
 
-                # 1) Render page to PNG bytes
+                # 1) Render page to PNG
                 try:
                     png_bytes = self._page_to_png_bytes(page)
                 except Exception as e:
                     logger.error(f"[pdf-vision] Failed to render page {page_idx + 1}: {e}")
-                    # Create blank page with note
+                    # Create a blank page indicating error, instead of crashing pipeline
                     self._add_translated_page(
                         out_doc,
                         page.rect,
-                        f"[Error rendering page {page_idx + 1}]",
+                        f"[Error rendering original page {page_idx + 1}]",
                         page_idx,
                     )
                     continue
 
-                # 2) Call vision model to get Spanish page text
+                # 2) Call vision model for Spanish translation
                 try:
                     translated_text = self.oai_client.translate_image_to_language(
                         png_bytes,
@@ -160,7 +141,7 @@ class PdfProcessor:
                     )
                     translated_text = ""
 
-                # Log a small sample so we know it's working
+                # Log a small sample for debugging
                 if translated_text:
                     logger.info(
                         f"[pdf-vision sample] page {page_idx + 1}: "
@@ -168,11 +149,11 @@ class PdfProcessor:
                     )
                 else:
                     logger.warning(
-                        f"[pdf-vision] Empty translation for page {page_idx + 1}, "
-                        f"creating blank page with placeholder."
+                        f"[pdf-vision] Empty translation for page {page_idx + 1}; "
+                        f"creating blank translated page."
                     )
 
-                # 3) Add a new page with this translated text
+                # 3) Add translated text page to output PDF
                 self._add_translated_page(
                     out_doc,
                     page.rect,
@@ -180,7 +161,7 @@ class PdfProcessor:
                     page_idx,
                 )
 
-            # Serialize new PDF to bytes
+            # Serialize translated PDF to bytes
             buf = io.BytesIO()
             out_doc.save(buf)
             buf.seek(0)
@@ -189,3 +170,20 @@ class PdfProcessor:
         finally:
             src_doc.close()
             out_doc.close()
+
+
+#========================================
+def translate_image_to_language(self, image_bytes, content_type, target_language, target_dialect):
+    # ... build messages
+    system_message = (
+        "You are a professional translator. "
+        "You see a page from a brochure or document as an image. "
+        "Your job is to translate ALL visible readable text into {language}, "
+        "keeping the logical order and structure. "
+        "Use plain text with line breaks to represent headings, bullet lists, "
+        "and separate sections clearly. Do not skip fine print or footers."
+    )
+
+    # user message: include the image
+    # image part uses the data: URL that the client builds internally
+    # ...
