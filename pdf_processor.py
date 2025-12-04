@@ -17,12 +17,44 @@ class PdfProcessor:
     - Build a NEW PDF:
         * Insert the original page as a rasterized background image.
         * Overlay translated text at the same bounding boxes with transparent background.
-    - This keeps layout visually close to the original, with no "white patches".
     """
 
     def __init__(self, oai_client: OaiClient, raster_dpi: int = 150):
         self.oai_client = oai_client
         self.raster_dpi = raster_dpi
+
+    # ---------------------------------------------------------
+    # Font mapping helper (avoid “need font file or buffer”)
+    # ---------------------------------------------------------
+    def _normalize_font_name(self, original: Optional[str]) -> str:
+        """
+        Map arbitrary PDF font names (BentonSans*, HelveticaNeue*, etc.)
+        to built-in fonts that PyMuPDF knows.
+
+        Built-in options include:
+        - 'helv', 'helv-bold', 'helv-oblique', 'helv-boldoblique'
+        - 'times-roman', 'times-bold', 'times-italic', 'times-bolditalic'
+        - 'courier', 'courier-bold', 'courier-oblique', 'courier-boldoblique'
+        """
+        if not original:
+            return "helv"
+
+        lower = original.lower()
+
+        # Bold-ish
+        if "bold" in lower or "blk" in lower or "black" in lower:
+            return "helv-bold"
+
+        # Italic/oblique
+        if "italic" in lower or "oblique" in lower:
+            return "helv-oblique"
+
+        # Light / thin -> regular helv
+        if "light" in lower or "thin" in lower:
+            return "helv"
+
+        # Condensed / regular -> just helv
+        return "helv"
 
     # ---------------------------------------------------------
     # 1) Collect spans & metadata from the original PDF
@@ -127,7 +159,7 @@ class PdfProcessor:
                     continue
 
                 font_size = max(float(meta.get("size", 10)) or 10.0, 4.0)
-                font_name = meta.get("font") or "helv"
+                font_name = self._normalize_font_name(meta.get("font"))
 
                 color_int = meta.get("color", 0)
                 # Expect 0xRRGGBB, convert to floats [0,1]
@@ -140,35 +172,14 @@ class PdfProcessor:
                     color = (0, 0, 0)
 
                 # Insert translated text with transparent background
-                try:
-                    new_page.insert_textbox(
-                        rect_span,
-                        text,
-                        fontsize=font_size,
-                        fontname=font_name,
-                        color=color,
-                        align=0,  # left align
-                    )
-                except Exception as e:
-                    # Fallback: try with a safe font name
-                    logger.warning(
-                        f"[pdf] Failed to insert text for {seg_id} "
-                        f"with font '{font_name}': {e}. Retrying with 'helv'."
-                    )
-                    try:
-                        new_page.insert_textbox(
-                            rect_span,
-                            text,
-                            fontsize=font_size,
-                            fontname="helv",
-                            color=color,
-                            align=0,
-                        )
-                    except Exception as e2:
-                        logger.error(
-                            f"[pdf] Fallback insert failed for {seg_id}: {e2}. Skipping span."
-                        )
-                        continue
+                new_page.insert_textbox(
+                    rect_span,
+                    text,
+                    fontsize=font_size,
+                    fontname=font_name,
+                    color=color,
+                    align=0,  # left align
+                )
 
         # Serialize new PDF to bytes
         buf = io.BytesIO()
