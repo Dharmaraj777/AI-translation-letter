@@ -12,26 +12,16 @@ class PdfProcessor:
     PDF translator.
 
     Strategy:
-    - Use PyMuPDF to extract text spans with position, font, size, and color.
+    - Use PyMuPDF to extract text spans with position, size, and color.
     - Send spans to Azure OpenAI via translate_segments (like DOCX/PPTX).
     - Build a NEW PDF:
         * Insert the original page as a rasterized background image.
-        * Overlay translated text at the same bounding boxes with transparent background.
+        * Overlay translated text at the same bounding boxes.
     """
 
     def __init__(self, oai_client: OaiClient, raster_dpi: int = 150):
         self.oai_client = oai_client
         self.raster_dpi = raster_dpi
-
-    # ---------------------------------------------------------
-    # Font mapping helper (force to a safe built-in font)
-    # ---------------------------------------------------------
-    def _normalize_font_name(self, original: Optional[str]) -> str:
-        """
-        Map arbitrary PDF font names to a built-in font that PyMuPDF knows.
-        For now we keep it simple and always use 'helv'.
-        """
-        return "helv"
 
     # ---------------------------------------------------------
     # 1) Collect spans & metadata from the original PDF
@@ -135,21 +125,14 @@ class PdfProcessor:
                 if rect_span.is_empty or rect_span.width <= 0 or rect_span.height <= 0:
                     continue
 
-                font_size = max(float(meta.get("size", 10)) or 10.0, 4.0)
-                font_name = self._normalize_font_name(meta.get("font"))
+                # Slightly larger than original to make it visible
+                base_size = float(meta.get("size", 10) or 10.0)
+                font_size = max(base_size * 1.1, 6.0)
+                font_name = "helv"  # safe built-in font
 
-                color_int = meta.get("color", 0)
-                # Expect 0xRRGGBB, convert to floats [0,1]
-                if isinstance(color_int, int):
-                    r = (color_int >> 16) & 255
-                    g = (color_int >> 8) & 255
-                    b = color_int & 255
-                    color = (r / 255.0, g / 255.0, b / 255.0)
-                else:
-                    color = (0, 0, 0)
+                # Use a visible dark blue-ish overlay color so you can see it
+                color = (0 / 255.0, 32 / 255.0, 96 / 255.0)  # dark navy
 
-                # Insert translated text with transparent background.
-                # Guarded so a single bad span doesn't kill the whole page.
                 try:
                     new_page.insert_textbox(
                         rect_span,
@@ -197,12 +180,27 @@ class PdfProcessor:
             doc.close()
             return out
 
+        # Build id->original mapping for debug
+        orig_by_id = {seg["id"]: seg["text"] for seg in segments}
+
         # Translate via Azure OpenAI (same API as DOCX/PPTX)
         id_to_translation = self.oai_client.translate_segments(
             segments,
             target_language=target_language,
             target_dialect=target_dialect,
         )
+
+        # Log a few sample translations to prove it's doing something
+        try:
+            sample_ids = list(id_to_translation.keys())[:5]
+            for sid in sample_ids:
+                logger.info(
+                    f"[pdf sample] {sid}: "
+                    f"{orig_by_id.get(sid, '')!r} -> {id_to_translation.get(sid, '')!r}"
+                )
+        except Exception:
+            # non-fatal if something goes wrong in debug logging
+            pass
 
         # Build new PDF with background + translated text
         try:
