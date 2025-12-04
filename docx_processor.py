@@ -15,8 +15,8 @@ class DocxProcessor:
     """
     DOCX translator.
 
-    - Text in the document body (paragraphs + tables) is translated at RUN level,
-      preserving font, size, color, etc.
+    - Text in the document body (paragraphs + tables + headers/footers) is translated
+      at RUN level, preserving font, size, color, etc.
     - Images:
         * For each embedded image:
             - Send image bytes to GPT-4.1 vision
@@ -28,13 +28,13 @@ class DocxProcessor:
     def __init__(self, oai_client: OaiClient):
         self.oai_client = oai_client
 
-
+    # ---------------------------------------------------------
     # TEXT: collect RUN-level segments
     # ---------------------------------------------------------
     def _collect_segments(self, doc: Document) -> List[Dict[str, str]]:
         segments: List[Dict[str, str]] = []
 
-        # Top-level paragraphs
+        # 1) Body paragraphs
         for p_idx, para in enumerate(doc.paragraphs):
             for r_idx, run in enumerate(para.runs):
                 text = run.text
@@ -42,7 +42,7 @@ class DocxProcessor:
                     seg_id = f"p-{p_idx}-r-{r_idx}"
                     segments.append({"id": seg_id, "text": text})
 
-        # Tables (cells)
+        # 2) Body tables (cells)
         for t_idx, table in enumerate(doc.tables):
             for row_idx, row in enumerate(table.rows):
                 for col_idx, cell in enumerate(row.cells):
@@ -56,6 +56,56 @@ class DocxProcessor:
                                 )
                                 segments.append({"id": seg_id, "text": text})
 
+        # 3) Headers & Footers (paragraphs + tables)
+        for sec_idx, section in enumerate(doc.sections):
+            header = section.header
+            footer = section.footer
+
+            # Header paragraphs
+            for p_idx, para in enumerate(header.paragraphs):
+                for r_idx, run in enumerate(para.runs):
+                    text = run.text
+                    if text and text.strip():
+                        seg_id = f"hdr-{sec_idx}-p-{p_idx}-r-{r_idx}"
+                        segments.append({"id": seg_id, "text": text})
+
+            # Header tables
+            for t_idx, table in enumerate(header.tables):
+                for row_idx, row in enumerate(table.rows):
+                    for col_idx, cell in enumerate(row.cells):
+                        for p_idx, para in enumerate(cell.paragraphs):
+                            for r_idx, run in enumerate(para.runs):
+                                text = run.text
+                                if text and text.strip():
+                                    seg_id = (
+                                        f"hdrtbl-{sec_idx}-t-{t_idx}-row-{row_idx}-"
+                                        f"col-{col_idx}-p-{p_idx}-r-{r_idx}"
+                                    )
+                                    segments.append({"id": seg_id, "text": text})
+
+            # Footer paragraphs
+            for p_idx, para in enumerate(footer.paragraphs):
+                for r_idx, run in enumerate(para.runs):
+                    text = run.text
+                    if text and text.strip():
+                        seg_id = f"ftr-{sec_idx}-p-{p_idx}-r-{r_idx}"
+                        segments.append({"id": seg_id, "text": text})
+
+            # Footer tables
+            for t_idx, table in enumerate(footer.tables):
+                for row_idx, row in enumerate(table.rows):
+                    for col_idx, cell in enumerate(row.cells):
+                        for p_idx, para in enumerate(cell.paragraphs):
+                            for r_idx, run in enumerate(para.runs):
+                                text = run.text
+                                if text and text.strip():
+                                    seg_id = (
+                                        f"ftrtbl-{sec_idx}-t-{t_idx}-row-{row_idx}-"
+                                        f"col-{col_idx}-p-{p_idx}-r-{r_idx}"
+                                    )
+                                    segments.append({"id": seg_id, "text": text})
+
+        logger.info(f"[docx] Collected {len(segments)} text segments from DOCX.")
         return segments
 
     def _apply_text_translations(
@@ -63,7 +113,7 @@ class DocxProcessor:
         doc: Document,
         id_to_translation: Dict[str, str],
     ) -> None:
-        # Top-level paragraphs
+        # 1) Body paragraphs
         for p_idx, para in enumerate(doc.paragraphs):
             for r_idx, run in enumerate(para.runs):
                 text = run.text
@@ -73,7 +123,7 @@ class DocxProcessor:
                 if seg_id in id_to_translation:
                     run.text = id_to_translation[seg_id]
 
-        # Tables
+        # 2) Body tables
         for t_idx, table in enumerate(doc.tables):
             for row_idx, row in enumerate(table.rows):
                 for col_idx, cell in enumerate(row.cells):
@@ -89,23 +139,70 @@ class DocxProcessor:
                             if seg_id in id_to_translation:
                                 run.text = id_to_translation[seg_id]
 
+        # 3) Headers & Footers
+        for sec_idx, section in enumerate(doc.sections):
+            header = section.header
+            footer = section.footer
+
+            # Header paragraphs
+            for p_idx, para in enumerate(header.paragraphs):
+                for r_idx, run in enumerate(para.runs):
+                    text = run.text
+                    if not text or not text.strip():
+                        continue
+                    seg_id = f"hdr-{sec_idx}-p-{p_idx}-r-{r_idx}"
+                    if seg_id in id_to_translation:
+                        run.text = id_to_translation[seg_id]
+
+            # Header tables
+            for t_idx, table in enumerate(header.tables):
+                for row_idx, row in enumerate(table.rows):
+                    for col_idx, cell in enumerate(row.cells):
+                        for p_idx, para in enumerate(cell.paragraphs):
+                            for r_idx, run in enumerate(para.runs):
+                                text = run.text
+                                if not text or not text.strip():
+                                    continue
+                                seg_id = (
+                                    f"hdrtbl-{sec_idx}-t-{t_idx}-row-{row_idx}-"
+                                    f"col-{col_idx}-p-{p_idx}-r-{r_idx}"
+                                )
+                                if seg_id in id_to_translation:
+                                    run.text = id_to_translation[seg_id]
+
+            # Footer paragraphs
+            for p_idx, para in enumerate(footer.paragraphs):
+                for r_idx, run in enumerate(para.runs):
+                    text = run.text
+                    if not text or not text.strip():
+                        continue
+                    seg_id = f"ftr-{sec_idx}-p-{p_idx}-r-{r_idx}"
+                    if seg_id in id_to_translation:
+                        run.text = id_to_translation[seg_id]
+
+            # Footer tables
+            for t_idx, table in enumerate(footer.tables):
+                for row_idx, row in enumerate(table.rows):
+                    for col_idx, cell in enumerate(row.cells):
+                        for p_idx, para in enumerate(cell.paragraphs):
+                            for r_idx, run in enumerate(para.runs):
+                                text = run.text
+                                if not text or not text.strip():
+                                    continue
+                                seg_id = (
+                                    f"ftrtbl-{sec_idx}-t-{t_idx}-row-{row_idx}-"
+                                    f"col-{col_idx}-p-{p_idx}-r-{r_idx}"
+                                )
+                                if seg_id in id_to_translation:
+                                    run.text = id_to_translation[seg_id]
+
     # ---------------------------------------------------------
     # IMAGES: markdown-table parser + GPT-4.1 vision + redraw
+    # (unchanged except for minor comments/logging kept as-is)
     # ---------------------------------------------------------
     def _parse_markdown_table(self, translated_text: str):
         """
-        Very lightweight parser for Markdown-style tables that GPT returns, e.g.:
-
-            Exemple de récompense
-
-            | Points         | Montant      |
-            |----------------|--------------|
-            | 200 points     | 10 $         |
-            | 500 points     | 25 $         |
-
-        Returns:
-            title_lines: list[str]  (lines before the first table row)
-            rows: list[list[str]]   (each row is a list of cell strings)
+        Very lightweight parser for Markdown-style tables that GPT returns.
         """
         lines = [l.rstrip() for l in translated_text.splitlines()]
 
@@ -328,7 +425,6 @@ class DocxProcessor:
 
         logger.info(f"[image] Completed image translation. Found={image_count}, translated={translated_count}")
 
-    
     def translate_document(
         self,
         filename: str,
@@ -350,7 +446,7 @@ class DocxProcessor:
             )
             self._apply_text_translations(doc, id_to_translation)
         else:
-            logger.info("No text segments found in DOCX body text.")
+            logger.info("No text segments found in DOCX body text / headers / footers.")
 
         # 2) Images via GPT-4.1 vision
         try:
