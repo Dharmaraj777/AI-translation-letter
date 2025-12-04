@@ -9,7 +9,7 @@ from spanish_translator_oai_client import OaiClient
 from spanish_translator_utils import UtilityFunctions
 from docx_processor import DocxProcessor
 from pptx_processor import PptxProcessor
-# from pdf_translator import PdfTranslator
+from pdf_processor import PdfProcessor
 
 
 def main():
@@ -27,9 +27,9 @@ def main():
     )
 
     # Instantiate per-type translators (they do NOT detect extensions)
-    docx_translator = DocxProcessor(oai_client)
-    pptx_translator = PptxProcessor(oai_client)
-    # pdf_translator = PdfTranslator(oai_client)
+    docx_processor = DocxProcessor(oai_client)
+    pptx_processor = PptxProcessor(oai_client)
+    pdf_processor  = PdfProcessor(oai_client)
 
     logger.info("Starting document translation pipeline.")
 
@@ -44,15 +44,6 @@ def main():
 
         for file in file_list:
             try:
-                # Skip if translated output already exists
-                if utils.translated_output_exists(file, suffix="_fr"):
-                    output_manager.log_status(
-                        file,
-                        "SKIPPED_ALREADY_TRANSLATED",
-                        "Translated output already present in output container.",
-                    )
-                    continue
-
                 # Page/slide count is just for logging
                 try:
                     file_len = utils.get_page_count_from_blob(file)
@@ -67,17 +58,17 @@ def main():
                 content_bytes = utils.download_blob_bytes(file)
 
                 # Decide which translator to use in MAIN (not inside translators)
-                # if extension == ".pdf":
-                #     translated_bytes = pdf_translator.translate_document(
-                #         file,
-                #         content_bytes,
-                #         target_language=cfg.target_language,
-                #         target_dialect=cfg.target_dialect,
-                #     )
+                if extension == ".pdf":
+                    translated_bytes = pdf_processor.translate_document(
+                        file,
+                        content_bytes,
+                        target_language=cfg.target_language,
+                        target_dialect=cfg.target_dialect,
+                    )
 
                 if extension == ".pptx":
                     print(f"Processing a **PPTX** file: **{file}**")
-                    translated_bytes = pptx_translator.translate_document(
+                    translated_bytes = pptx_processor.translate_document(
                         file,
                         content_bytes,
                         target_language=cfg.target_language,
@@ -86,7 +77,7 @@ def main():
 
                 elif extension == ".docx":
                     print(f"Processing a **DOCX** file: **{file}**")
-                    translated_bytes = docx_translator.translate_document(
+                    translated_bytes = docx_processor.translate_document(
                         file,
                         content_bytes,
                         target_language=cfg.target_language,
@@ -100,8 +91,9 @@ def main():
                     output_manager.log_status(file, "SKIPPED_UNSUPPORTED", f"Extension: {extension}")
                     continue
 
-                # Build output name consistently with utils
-                out_name = utils.get_translated_blob_name(file, suffix="_fr")
+                # Build output name: file -> file_fr.ext
+                base, ext_only = os.path.splitext(file)
+                out_name = f"{base}_sp{ext_only}"
 
                 # Save translated file via OutputManager
                 output_manager.upload_translated_file(out_name, translated_bytes)
