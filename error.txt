@@ -1,172 +1,46 @@
-2025-12-04 07:42:54,583 - INFO - Starting document translation pipeline.
-2025-12-04 07:42:55,699 - INFO - Found the following files to process: ['Employee launch email blast template  BCC WPR.docx', 'IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf', 'The Power of Positivity 3.26.25.pptx'].
-2025-12-04 07:42:55,717 - INFO - Processing file: Employee launch email blast template  BCC WPR.docx...with ~1 pages/slides
-2025-12-04 07:42:55,718 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
+2025-12-04 07:54:20,985 - INFO - Starting document translation pipeline.
+2025-12-04 07:54:21,794 - INFO - Found the following files to process: ['Employee launch email blast template  BCC WPR.docx', 'IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf', 'The Power of Positivity 3.26.25.pptx'].
+2025-12-04 07:54:21,814 - INFO - Processing file: Employee launch email blast template  BCC WPR.docx...with ~1 pages/slides
+2025-12-04 07:54:21,816 - INFO - Downloading blob: Employee launch email blast template  BCC WPR.docx
 Processing a **DOCX** file: **Employee launch email blast template  BCC WPR.docx**
-2025-12-04 07:42:55,729 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
-2025-12-04 07:42:55,953 - INFO - [docx] Collected 84 text segments from DOCX.
-2025-12-04 07:42:55,954 - INFO - Translating 84 segments via Azure OpenAI...
-2025-12-04 07:42:55,954 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
-2025-12-04 07:43:30,278 - INFO - Translation complete.
-2025-12-04 07:43:30,294 - INFO - [image] Found image rel_id=rId10, content_type=image/png
-2025-12-04 07:43:30,825 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
-2025-12-04 07:43:30,844 - INFO - Calling GPT-4.1 vision to translate image text...
-2025-12-04 07:43:32,228 - INFO - [image translation] GPT output (first 120 chars): 'Ejemplo de recompensa\n\n| 200 puntos   | $10   |\n| 500 puntos   | $25   |\n| 1,000 puntos | $50   |\n| 2,000 puntos | $100 '
-2025-12-04 07:43:32,230 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Ejemplo de recompensa\n\n| 200 puntos   | $10   |\n| 500 puntos   | $25   |\n| 1,000'
-2025-12-04 07:43:32,232 - INFO - [image] Rendering translated image as table layout.
-2025-12-04 07:43:32,236 - INFO - [image] Replaced image (rel_id=rId10) with translated version.
-2025-12-04 07:43:32,237 - INFO - [image] Completed image translation. Found=1, translated=1
-2025-12-04 07:43:32,244 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_fr.docx
-2025-12-04 07:43:32,260 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_fr.docx)
+2025-12-04 07:54:21,826 - INFO - Translating DOCX document (text + images): Employee launch email blast template  BCC WPR.docx
+2025-12-04 07:54:21,838 - INFO - [docx] Collected 84 text segments from DOCX.
+2025-12-04 07:54:21,839 - INFO - Translating 84 segments via Azure OpenAI...
+2025-12-04 07:54:21,840 - INFO - Translating batch of 84 segments: p-1-r-0 ... p-39-r-4
+2025-12-04 07:54:34,650 - INFO - Translation complete.
+2025-12-04 07:54:34,663 - INFO - [image] Found image rel_id=rId10, content_type=image/png
+2025-12-04 07:54:34,716 - INFO - Upscaled image from 402x244 to 1024x621 for vision OCR.
+2025-12-04 07:54:34,735 - INFO - Calling GPT-4.1 vision to translate image text...
+2025-12-04 07:54:36,553 - INFO - [image translation] GPT output (first 120 chars): 'Ejemplo de recompensa\n\n200 puntos      $10  \n500 puntos      $25  \n1,000 puntos    $50  \n2,000 puntos    $100'
+2025-12-04 07:54:36,554 - INFO - [image] GPT translation for rel_id=rId10 (first 80 chars): 'Ejemplo de recompensa\n\n200 puntos      $10  \n500 puntos      $25  \n1,000 puntos '
+2025-12-04 07:54:36,556 - INFO - [image] No markdown table detected; rendering as wrapped text.
+2025-12-04 07:54:36,560 - INFO - [image] Replaced image (rel_id=rId10) with translated version.
+2025-12-04 07:54:36,562 - INFO - [image] Completed image translation. Found=1, translated=1
+2025-12-04 07:54:36,569 - INFO - Uploading translated file: Employee launch email blast template  BCC WPR_fr.docx
+2025-12-04 07:54:36,596 - INFO - [STATUS] Employee launch email blast template  BCC WPR.docx -> SUCCESS (Output: Employee launch email blast template  BCC WPR_fr.docx)
 
 ______________________________________
-2025-12-04 07:43:32,390 - INFO - Processing file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf...with ~4 pages/slides
-2025-12-04 07:43:32,391 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-04 07:43:32,458 - INFO - Translating PDF document (overlay on original background): IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
-2025-12-04 07:43:32,552 - INFO - [pdf] Collected 126 text spans from PDF.
-2025-12-04 07:43:32,556 - INFO - Translating 126 segments via Azure OpenAI...
-2025-12-04 07:43:32,556 - INFO - Translating batch of 100 segments: p-0-b-2-l-0-s-0 ... p-2-b-17-l-0-s-0
-2025-12-04 07:43:45,368 - INFO - Translating batch of 26 segments: p-2-b-17-l-1-s-0 ... p-3-b-4-l-0-s-0
-2025-12-04 07:43:52,836 - INFO - Translation complete.
-2025-12-04 07:43:52,837 - INFO - [pdf] Rebuilding translated PDF with 4 pages.
-2025-12-04 07:43:53,061 - WARNING - [pdf] Failed to insert text for p-0-b-2-l-0-s-0 with font 'BentonSansCond-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,075 - WARNING - [pdf] Failed to insert text for p-0-b-2-l-1-s-0 with font 'BentonSansCond-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,077 - WARNING - [pdf] Failed to insert text for p-0-b-3-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,079 - WARNING - [pdf] Failed to insert text for p-0-b-3-l-1-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,110 - WARNING - [pdf] Failed to insert text for p-1-b-0-l-0-s-0 with font 'BentonSans-Light': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,112 - WARNING - [pdf] Failed to insert text for p-1-b-1-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,114 - WARNING - [pdf] Failed to insert text for p-1-b-2-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,116 - WARNING - [pdf] Failed to insert text for p-1-b-2-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,118 - WARNING - [pdf] Failed to insert text for p-1-b-2-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,120 - WARNING - [pdf] Failed to insert text for p-1-b-3-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,122 - WARNING - [pdf] Failed to insert text for p-1-b-4-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,125 - WARNING - [pdf] Failed to insert text for p-1-b-4-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,128 - WARNING - [pdf] Failed to insert text for p-1-b-5-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,130 - WARNING - [pdf] Failed to insert text for p-1-b-5-l-0-s-1 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,132 - WARNING - [pdf] Failed to insert text for p-1-b-5-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,132 - WARNING - [pdf] Failed to insert text for p-1-b-5-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,132 - WARNING - [pdf] Failed to insert text for p-1-b-6-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,132 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,132 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-0-s-1 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,166 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-0-s-2 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,166 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-0-s-3 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,166 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-0-s-4 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,171 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,171 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-1 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,175 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-2 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,175 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-3 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,181 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-4 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,183 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-5 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,185 - WARNING - [pdf] Failed to insert text for p-1-b-7-l-1-s-6 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,186 - WARNING - [pdf] Failed to insert text for p-1-b-8-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,191 - WARNING - [pdf] Failed to insert text for p-1-b-8-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-9-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-10-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-11-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-12-l-0-s-0 with font 'HelveticaNeueLTStd-Blk': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-13-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-14-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,193 - WARNING - [pdf] Failed to insert text for p-1-b-15-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,207 - WARNING - [pdf] Failed to insert text for p-1-b-15-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,210 - WARNING - [pdf] Failed to insert text for p-1-b-16-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,213 - WARNING - [pdf] Failed to insert text for p-1-b-16-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,214 - WARNING - [pdf] Failed to insert text for p-1-b-17-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,216 - WARNING - [pdf] Failed to insert text for p-1-b-17-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,218 - WARNING - [pdf] Failed to insert text for p-1-b-18-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,221 - WARNING - [pdf] Failed to insert text for p-1-b-18-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-19-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-20-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-20-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-20-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-21-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-21-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,222 - WARNING - [pdf] Failed to insert text for p-1-b-22-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,237 - WARNING - [pdf] Failed to insert text for p-1-b-22-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,237 - WARNING - [pdf] Failed to insert text for p-1-b-23-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,245 - WARNING - [pdf] Failed to insert text for p-1-b-23-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,247 - WARNING - [pdf] Failed to insert text for p-1-b-24-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,249 - WARNING - [pdf] Failed to insert text for p-1-b-24-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,252 - WARNING - [pdf] Failed to insert text for p-1-b-25-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,254 - WARNING - [pdf] Failed to insert text for p-1-b-25-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,254 - WARNING - [pdf] Failed to insert text for p-1-b-25-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,285 - WARNING - [pdf] Failed to insert text for p-2-b-0-l-0-s-0 with font 'BentonSans-Light': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,285 - WARNING - [pdf] Failed to insert text for p-2-b-1-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,300 - WARNING - [pdf] Failed to insert text for p-2-b-2-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,303 - WARNING - [pdf] Failed to insert text for p-2-b-3-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,305 - WARNING - [pdf] Failed to insert text for p-2-b-3-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,307 - WARNING - [pdf] Failed to insert text for p-2-b-3-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,309 - WARNING - [pdf] Failed to insert text for p-2-b-4-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,311 - WARNING - [pdf] Failed to insert text for p-2-b-5-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,313 - WARNING - [pdf] Failed to insert text for p-2-b-5-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,314 - WARNING - [pdf] Failed to insert text for p-2-b-6-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-7-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-8-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-0-s-1 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-0-s-2 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-1 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,317 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-2 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,332 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-3 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,332 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-4 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,336 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-5 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,340 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-6 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,349 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-7 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,355 - WARNING - [pdf] Failed to insert text for p-2-b-9-l-1-s-8 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,359 - WARNING - [pdf] Failed to insert text for p-2-b-10-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,359 - WARNING - [pdf] Failed to insert text for p-2-b-11-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,359 - WARNING - [pdf] Failed to insert text for p-2-b-11-l-0-s-1 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,359 - WARNING - [pdf] Failed to insert text for p-2-b-11-l-0-s-2 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,359 - WARNING - [pdf] Failed to insert text for p-2-b-12-l-0-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,369 - WARNING - [pdf] Failed to insert text for p-2-b-13-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,370 - WARNING - [pdf] Failed to insert text for p-2-b-13-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,372 - WARNING - [pdf] Failed to insert text for p-2-b-14-l-0-s-0 with font 'HelveticaNeueLTStd-Blk': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,374 - WARNING - [pdf] Failed to insert text for p-2-b-15-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,377 - WARNING - [pdf] Failed to insert text for p-2-b-15-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,378 - WARNING - [pdf] Failed to insert text for p-2-b-15-l-2-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,378 - WARNING - [pdf] Failed to insert text for p-2-b-16-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,378 - WARNING - [pdf] Failed to insert text for p-2-b-16-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,378 - WARNING - [pdf] Failed to insert text for p-2-b-16-l-1-s-1 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,385 - WARNING - [pdf] Failed to insert text for p-2-b-16-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,385 - WARNING - [pdf] Failed to insert text for p-2-b-17-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,385 - WARNING - [pdf] Failed to insert text for p-2-b-17-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,385 - WARNING - [pdf] Failed to insert text for p-2-b-17-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,385 - WARNING - [pdf] Failed to insert text for p-2-b-17-l-3-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,393 - WARNING - [pdf] Failed to insert text for p-2-b-17-l-3-s-1 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,395 - WARNING - [pdf] Failed to insert text for p-2-b-17-l-4-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,397 - WARNING - [pdf] Failed to insert text for p-2-b-18-l-0-s-0 with font 'HelveticaNeueLTStd-Blk': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,398 - WARNING - [pdf] Failed to insert text for p-2-b-19-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,400 - WARNING - [pdf] Failed to insert text for p-2-b-19-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,402 - WARNING - [pdf] Failed to insert text for p-2-b-19-l-2-s-0 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,405 - WARNING - [pdf] Failed to insert text for p-2-b-19-l-2-s-1 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,406 - WARNING - [pdf] Failed to insert text for p-2-b-20-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,409 - WARNING - [pdf] Failed to insert text for p-2-b-20-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,410 - WARNING - [pdf] Failed to insert text for p-2-b-20-l-1-s-1 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,410 - WARNING - [pdf] Failed to insert text for p-2-b-20-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,410 - WARNING - [pdf] Failed to insert text for p-2-b-21-l-0-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,410 - WARNING - [pdf] Failed to insert text for p-2-b-21-l-1-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,418 - WARNING - [pdf] Failed to insert text for p-2-b-21-l-2-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,421 - WARNING - [pdf] Failed to insert text for p-2-b-21-l-3-s-0 with font 'BentonSans-Regular': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,421 - WARNING - [pdf] Failed to insert text for p-2-b-21-l-3-s-1 with font 'BentonSans-Bold': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,442 - WARNING - [pdf] Failed to insert text for p-3-b-0-l-0-s-0 with font 'BentonSans-Light': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,442 - WARNING - [pdf] Failed to insert text for p-3-b-1-l-0-s-0 with font 'BentonSansCondensed-Ligh': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,442 - WARNING - [pdf] Failed to insert text for p-3-b-1-l-1-s-0 with font 'BentonSansCondensed-Ligh': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,442 - WARNING - [pdf] Failed to insert text for p-3-b-3-l-0-s-0 with font 'BentonSansCond-Book': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,442 - WARNING - [pdf] Failed to insert text for p-3-b-3-l-0-s-1 with font 'BentonSansCond-Book': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,457 - WARNING - [pdf] Failed to insert text for p-3-b-3-l-0-s-2 with font 'BentonSansCond-Book': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,457 - WARNING - [pdf] Failed to insert text for p-3-b-4-l-0-s-0 with font 'BentonSansCond-Book': need font file or buffer. Retrying with 'helv'.
-2025-12-04 07:43:53,505 - ERROR - This application is not able to process file with extension type: .pdf at this time.
-2025-12-04 07:43:53,508 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> SKIPPED_UNSUPPORTED (Extension: .pdf)
-2025-12-04 07:43:53,713 - INFO - Processing file: The Power of Positivity 3.26.25.pptx...with ~1 pages/slides
-2025-12-04 07:43:53,715 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
+2025-12-04 07:54:36,664 - INFO - Processing file: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf...with ~4 pages/slides
+2025-12-04 07:54:36,666 - INFO - Downloading blob: IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
+2025-12-04 07:54:36,687 - INFO - Translating PDF document (overlay on original background): IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf
+2025-12-04 07:54:36,780 - INFO - [pdf] Collected 126 text spans from PDF.
+2025-12-04 07:54:36,781 - INFO - Translating 126 segments via Azure OpenAI...
+2025-12-04 07:54:36,783 - INFO - Translating batch of 100 segments: p-0-b-2-l-0-s-0 ... p-2-b-17-l-0-s-0
+2025-12-04 07:54:55,774 - INFO - Translating batch of 26 segments: p-2-b-17-l-1-s-0 ... p-3-b-4-l-0-s-0
+2025-12-04 07:55:00,857 - INFO - Translation complete.
+2025-12-04 07:55:00,859 - INFO - [pdf] Rebuilding translated PDF with 4 pages.
+2025-12-04 07:55:01,113 - ERROR - Error processing file IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf: need font file or buffer
+2025-12-04 07:55:01,114 - INFO - [STATUS] IER-1380550 2026 LGFI BCC Wellness Premium Reward Member Brochure FA.pdf -> TRANSLATION_FAILED (need font file or buffer)
+2025-12-04 07:55:01,251 - INFO - Processing file: The Power of Positivity 3.26.25.pptx...with ~1 pages/slides
+2025-12-04 07:55:01,253 - INFO - Downloading blob: The Power of Positivity 3.26.25.pptx
 Processing a **PPTX** file: **The Power of Positivity 3.26.25.pptx**
-2025-12-04 07:43:53,768 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
-2025-12-04 07:43:53,781 - INFO - [pptx] Collected 9 text segments from PPTX.
-2025-12-04 07:43:53,781 - INFO - Translating 9 segments via Azure OpenAI...
-2025-12-04 07:43:53,781 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
-2025-12-04 07:43:58,988 - INFO - Translation complete.
-2025-12-04 07:43:59,044 - INFO - Uploading translated file: The Power of Positivity 3.26.25_fr.pptx
-2025-12-04 07:43:59,144 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_fr.pptx)
+2025-12-04 07:55:01,276 - INFO - Translating PPTX document: The Power of Positivity 3.26.25.pptx
+2025-12-04 07:55:01,287 - INFO - [pptx] Collected 9 text segments from PPTX.
+2025-12-04 07:55:01,288 - INFO - Translating 9 segments via Azure OpenAI...
+2025-12-04 07:55:01,289 - INFO - Translating batch of 9 segments: s-0-sh-1-p-0-r-0 ... s-0-sh-6-p-0-r-0
+2025-12-04 07:55:04,039 - INFO - Translation complete.
+2025-12-04 07:55:04,106 - INFO - Uploading translated file: The Power of Positivity 3.26.25_fr.pptx
+2025-12-04 07:55:04,217 - INFO - [STATUS] The Power of Positivity 3.26.25.pptx -> SUCCESS (Output: The Power of Positivity 3.26.25_fr.pptx)
 
 ______________________________________
-2025-12-04 07:43:59,168 - INFO - ************* END of Processing File ******************
+2025-12-04 07:55:04,238 - INFO - ************* END of Processing File ******************
